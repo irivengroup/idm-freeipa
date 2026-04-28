@@ -1,0 +1,42 @@
+services:
+  ipa-server:
+    build: ./server
+    container_name: ipa-server
+    hostname: ${IPA_SERVER_HOSTNAME}
+    domainname: ${DOMAIN}
+    privileged: true
+    cgroup: host
+    env_file:
+      - .env
+    networks:
+      idm_net:
+        ipv4_address: ${IPA_SERVER_IP}
+    ports:
+      - "2220:22"
+      - "8080:80"
+      - "8443:443"
+      - "389:389"
+      - "636:636"
+      - "88:88"
+      - "88:88/udp"
+      - "464:464"
+      - "464:464/udp"
+      - "53:53"
+      - "53:53/udp"
+    volumes:
+      - ipa_data:/data
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+    command: /usr/local/bin/entrypoint.sh
+
+networks:
+  idm_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+volumes:
+  ipa_data:
