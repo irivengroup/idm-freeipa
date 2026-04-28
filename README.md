@@ -80,7 +80,8 @@ Mot de passe : Passw0rd123!
 ## Interface Web FreeIPA
 
 ```text
-https://localhost:8443
+https://localhost:8443/ipa/ui/
+
 ```
 
 Compte administrateur :

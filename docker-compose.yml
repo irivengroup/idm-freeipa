@@ -4,7 +4,6 @@ services:
       context: ./server
     container_name: ipa-server
     hostname: ${IPA_SERVER_HOSTNAME}
-    domainname: ${DOMAIN}
     privileged: true
     env_file:
       - .env
@@ -14,34 +13,26 @@ services:
     ports:
       - "2220:22"
       - "8080:80"
-      - "8443:443"
+      - "443:443"
       - "389:389"
       - "636:636"
       - "88:88"
       - "88:88/udp"
       - "464:464"
       - "464:464/udp"
-      - "5353:53"
-      - "5353:53/udp"
     volumes:
       - ipa_data:/data
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     tmpfs:
       - /run
       - /tmp
-    command: ["/usr/local/bin/entrypoint.sh"]
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /data/ipa-installed && systemctl is-active sshd >/dev/null 2>&1"]
-      interval: 30s
-      timeout: 10s
-      retries: 20
+    stop_signal: SIGRTMIN+3
 
   ipa-client1:
     build:
       context: ./client
     container_name: ipa-client1
     hostname: ${IPA_CLIENT_1_HOSTNAME}
-    domainname: ${DOMAIN}
     privileged: true
     env_file:
       - .env
@@ -53,21 +44,19 @@ services:
     ports:
       - "2221:22"
     depends_on:
-      ipa-server:
-        condition: service_started
+      - ipa-server
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     tmpfs:
       - /run
       - /tmp
-    command: ["/usr/local/bin/entrypoint.sh"]
+    stop_signal: SIGRTMIN+3
 
   ipa-client2:
     build:
       context: ./client
     container_name: ipa-client2
     hostname: ${IPA_CLIENT_2_HOSTNAME}
-    domainname: ${DOMAIN}
     privileged: true
     env_file:
       - .env
@@ -79,14 +68,13 @@ services:
     ports:
       - "2222:22"
     depends_on:
-      ipa-server:
-        condition: service_started
+      - ipa-server
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     tmpfs:
       - /run
       - /tmp
-    command: ["/usr/local/bin/entrypoint.sh"]
+    stop_signal: SIGRTMIN+3
 
 networks:
   idm_net:

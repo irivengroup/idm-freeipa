@@ -7,17 +7,20 @@ mkdir -p /run/sshd
 ssh-keygen -A
 
 CLIENT_HOSTNAME="$(hostname -f)"
+
 hostname "${CLIENT_HOSTNAME}" || true
+hostnamectl set-hostname "${CLIENT_HOSTNAME}" || true
 
-grep -q "${IPA_SERVER_HOSTNAME}" /etc/hosts || echo "${IPA_SERVER_IP} ${IPA_SERVER_HOSTNAME} ipa" >> /etc/hosts
+if ! grep -q "${IPA_SERVER_HOSTNAME}" /etc/hosts; then
+  echo "${IPA_SERVER_IP} ${IPA_SERVER_HOSTNAME} ${IPA_SERVER_SHORTNAME:-ipa}" >> /etc/hosts
+fi
 
-echo "[INFO] Attente du serveur IPA LDAP..."
-until nc -z "${IPA_SERVER_IP}" 389 >/dev/null 2>&1; do
+echo "[INFO] Attente du serveur IPA LDAP/Kerberos/HTTPS..."
+until nc -z "${IPA_SERVER_IP}" 389 >/dev/null 2>&1 && nc -z "${IPA_SERVER_IP}" 88 >/dev/null 2>&1 && nc -z "${IPA_SERVER_IP}" 443 >/dev/null 2>&1; do
   sleep 10
 done
 
-echo "[INFO] Attente supplémentaire des services IPA..."
-sleep 45
+sleep 30
 
 if [ ! -f /etc/ipa/default.conf ]; then
   echo "[INFO] Enrôlement du client ${CLIENT_HOSTNAME}..."
@@ -35,6 +38,3 @@ if [ ! -f /etc/ipa/default.conf ]; then
 else
   echo "[INFO] Client déjà enrôlé."
 fi
-
-echo "[INFO] Démarrage systemd..."
-exec /usr/sbin/init

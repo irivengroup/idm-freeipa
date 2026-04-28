@@ -1,0 +1,13 @@
+[Unit]
+Description=Bootstrap FreeIPA server in Docker lab
+After=network-online.target sshd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/idm-lab.env
+ExecStart=/usr/local/bin/entrypoint.sh
+
+[Install]
+WantedBy=multi-user.target
