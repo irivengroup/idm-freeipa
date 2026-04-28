@@ -1,5 +1,7 @@
 # Lab Docker FreeIPA / Red Hat IdM sur Rocky Linux 9
 
+Redhat Identity Management Lab (Environment)
+
 ## Contenu
 
 - 1 serveur FreeIPA / IdM avec DNS intégré
