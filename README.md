@@ -1,129 +1,232 @@
-# Lab Docker FreeIPA / Red Hat IdM sur Rocky Linux 9
+# IRIVEN IDMCluster — FreeIPA / RedHat IdM Lab sur Rocky Linux 10
 
-Redhat Identity Management Lab (Environment)
+## 1. Présentation
 
-## Objectif
+**IRIVEN IDM Lab** est une infrastructure professionnelle de laboratoire et de validation pour **Red Hat Identity Management (IdM) / FreeIPA** déployée sur **Rocky Linux 10** avec automatisation complète via **Ansible**.
 
-Ce lab crée un environnement de test avec :
+Le projet simule une architecture proche production avec :
 
-- 1 serveur FreeIPA / Red Hat IdM avec DNS intégré
-- 2 clients Rocky Linux 9 enrôlés dans le domaine
-- SSH accessible sur le serveur et les deux clients
-- Configuration centralisée via `.env`
+* FreeIPA Primary
+* FreeIPA Replica
+* Load Balancers HAProxy
+* DNS intégré
+* Kerberos
+* LDAP / LDAPS
+* PKI
+* réplication multi-site
+* clients enrôlés IPA
+* gestion NTP centralisée (serveurs + clients)
+* règles sudo
+* règles HBAC
+* RBAC orienté production
+* healthchecks et validations post-déploiement
 
-## Arborescence
+L’objectif est de fournir un socle robuste, idempotent et maintenable pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements proches production.
+
+→ Documentation complète : [docs/index.md](docs/index.md)
+
+---
+
+## 2. Architecture cible
+
+```text
+Administration Host
+│
+├── idmadmin                Bastion / poste Ansible / client IPA
+│
+├── Site A — 192.168.1.0/24
+│   ├── idmprimarya          Primary IdM + DNS + CA
+│
+├── Site B — 192.168.1.0/24
+│   ├── idmreplicab          Replica IdM + DNS
+│
+└── HA Layer
+    ├── idmloadbalancer1     HAProxy + Keepalived
+    └── idmloadbalancer2     HAProxy + Keepalived
+```
+
+Point d’entrée principal :
+
+```text
+idmloadbalancer.iriven.lab
+```
+
+---
+
+## 3. Nomenclature
+
+| Rôle            | Hostname         | FQDN                        |
+| --------------- | ---------------- | --------------------------- |
+| Primary IdM     | idmprimarya      | idmprimarya.iriven.lab      |
+| Replica IdM     | idmreplicab      | idmreplicab.iriven.lab      |
+| Load Balancer 1 | idmloadbalancer1 | idmloadbalancer1.iriven.lab |
+| Load Balancer 2 | idmloadbalancer2 | idmloadbalancer2.iriven.lab |
+| VIP LB          | idmloadbalancer  | idmloadbalancer.iriven.lab  |
+| Admin Host      | idmadmin         | idmadmin.iriven.lab         |
+
+---
+
+## 4. Principes de robustesse intégrés
+
+Cette version intègre les corrections et bonnes pratiques validées pendant les tests :
+
+* playbooks idempotents
+* rôles Ansible séparés par responsabilité
+* variables centralisées dans `inventory/group_vars/`
+* aucune duplication de configuration
+* mises à jour contrôlées plutôt que réécriture brutale
+* validation systématique post-déploiement
+* configuration NTP cohérente serveurs + clients
+* HAProxy compatible FreeIPA
+* suppression des erreurs de bind socket
+* gestion correcte des services systemd
+* healthcheck IPA intégré
+* règles sudo/HBAC structurées
+* séparation RBAC par groupes métiers
+* support du failover IPA via LB
+
+---
+
+## 5. Déploiement
+
+Déploiement depuis `idmadmin` :
+
+```bash
+cd /opt/idm-lab
+ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+```
+
+Déploiement par domaine :
+
+```bash
+ansible-playbook -i inventory/hosts.ini playbooks/freeipa.yml
+ansible-playbook -i inventory/hosts.ini playbooks/loadbalancers.yml
+ansible-playbook -i inventory/hosts.ini playbooks/clients.yml
+ansible-playbook -i inventory/hosts.ini playbooks/chrony.yml
+ansible-playbook -i inventory/hosts.ini playbooks/rbac.yml
+```
+
+### Prise en main Rapide en production
+
+```bash
+cd /opt/idm-lab
+ansible-galaxy collection install -r requirements.yml
+cp inventory/group_vars/vault.yml.example inventory/group_vars/vault.yml
+ansible-vault encrypt inventory/group_vars/vault.yml
+ansible-playbook --ask-vault-pass playbooks/site.yml
+```
+
+---
+
+## 6. Validation opérationnelle
+
+Exemples de vérification :
+
+```bash
+ipactl status
+ipa-healthcheck --output-type human
+ipa host-find
+ipa dnsrecord-find iriven.lab --name=_ldap._tcp
+chronyc sources
+systemctl status sssd
+```
+
+Validation client :
+
+```bash
+id admin
+getent passwd admin
+klist -k
+sssctl domain-status iriven.lab
+```
+
+Validation SSH / sudo :
+
+```bash
+ssh testadmin@idmadmin.iriven.lab
+sudo -l
+sudo whoami
+```
+
+---
+
+## 7. Structure du projet
 
 ```text
 idm-lab/
-├── .env
-├── docker-compose.yml
+├── inventory/
+│   ├── hosts.ini
+│   └── group_vars/
+├── playbooks/
+├── roles/
+├── templates/
+├── docs/
 ├── README.md
-├── server/
-│   ├── Dockerfile
-│   └── entrypoint.sh
-└── client/
-    ├── Dockerfile
-    └── entrypoint.sh
+└── ansible.cfg
 ```
 
-## Lancement
+---
+
+## 8. Commandes utiles
+
+Exécution ciblée :
 
 ```bash
-docker compose up -d --build
+ansible -i inventory/hosts.ini idm_servers -m ping
 ```
 
-ou 
+Validation HAProxy :
 
 ```bash
-docker compose down -v --remove-orphans
-docker compose build --no-cache
-docker compose up -d
+systemctl status haproxy
+haproxy -c -f /etc/haproxy/haproxy.cfg
 ```
 
-## Vérification et Suivi des logs
+Validation chrony :
 
 ```bash
-docker ps
-docker logs -f ipa-server
-docker logs -f ipa-client1
-docker logs -f ipa-client2
+chronyc tracking
+chronyc sources
 ```
 
-## Accès SSH
+---
 
-```bash
-ssh root@localhost -p 2220
-ssh root@localhost -p 2221
-ssh root@localhost -p 2222
-```
+## 9. Limites connues
 
-Mot de passe root par défaut :
+Ce projet reste un **lab avancé orienté production**.
 
-```text
-rootpass
-```
+Pour un environnement réel, il faut compléter avec :
 
-## Interface Web FreeIPA
+* stratégie de backup/restauration
+* supervision centralisée
+* PRA / PCA
+* rotation des secrets
+* MFA
+* centralisation des logs
+* PKI durcie
+* audit sudo avancé
+* patch management
+* segmentation réseau réelle
 
-```text
-https://localhost:8443
-```
+---
 
-Identifiants :
+## 10. Finalité pédagogique
 
-```text
-Utilisateur : admin
-Mot de passe : Passw0rd123!
-```
+Ce projet permet de pratiquer :
 
+* déploiement FreeIPA Primary / Replica
+* DNS intégré
+* Kerberos
+* LDAP / LDAPS
+* réplication
+* enrollment client
+* SSSD
+* HAProxy + failover
+* chrony / NTP maîtrisé
+* sudo rules
+* HBAC
+* RBAC
+* validation de résilience
+* architecture IDM proche production
 
-## Interface Web FreeIPA
-
-```text
-https://localhost:8443/ipa/ui/
-
-```
-
-Compte administrateur :
-
-```text
-admin / Passw0rd123!
-```
-
-## Tests utiles
-
-Sur le serveur :
-
-```bash
-docker exec -it ipa-server bash
-kinit admin
-ipa user-find
-ipa host-find
-ipa dnszone-find
-```
-
-Créer un utilisateur :
-
-```bash
-ipa user-add formation --first=Formation --last=IdM --password
-```
-
-Tester depuis un client :
-
-```bash
-docker exec -it ipa-client1 bash
-id formation
-kinit formation
-klist
-```
-
-## Nettoyage total (Suppression complète)
-
-```bash
-docker compose down -v --remove-orphans
-```
-
-## Notes
-
-- Le port DNS du conteneur est exposé sur `5353` côté hôte afin d’éviter les conflits avec un DNS local déjà actif.
-- Ce lab est destiné aux tests et à l’apprentissage. Il ne doit pas être utilisé comme architecture de production.
+L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.

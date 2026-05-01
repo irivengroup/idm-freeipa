@@ -1,0 +1,492 @@
+Hostname: rocky-idm.lab.local
+Root password: fort
+User admin: optionnel
+Time zone: Europe/Paris
+Software Selection: Minimal Install
+
+
+
+IP plan conseillé
+
+labdesktop      192.168.1.50
+
+idmprimarya     192.168.1.51
+idmreplicab     192.168.1.52
+idmloadbalancer1 : 192.168.1.53
+idmloadbalancer2 : 192.168.1.54
+VIP              : 192.168.1.55
+FQDN VIP          : idmloadbalancer.iriven.lab
+
+idmclient1a     192.168.1.61
+idmclient2a     192.168.1.62
+idmnode1a       192.168.1.63
+
+idmclient1b     192.168.1.71
+idmclient2b     192.168.1.72
+idmnode1b       192.168.1.73
+
+
+sudo nmcli connection modify ens160 \
+ipv4.addresses 192.168.1.52/24 \
+ipv4.gateway 192.168.1.1 \
+ipv4.dns "192.168.1.51 1.1.1.1" \
+ipv4.method manual \
+connection.autoconnect yes
+
+sudo nmcli connection up ens160
+
+
+hostnamectl set-hostname idmadmin.iriven.lab
+
+sudo hostnamectl set-hostname idmclient1b.iriven.lab
+sudo hostnamectl set-hostname idmclient1a.iriven.lab
+sudo hostnamectl set-hostname idmclient2b.iriven.lab
+sudo hostnamectl set-hostname idmloadbalancer.iriven.lab
+exec bash
+
+ssh-copy-id iriven@192.168.1.72
+
+ssh iriven@192.168.1.53 "sudo -n true && hostname -f"
+
+sudo tee /etc/ssh/sshd_config.d/10-idm-lab.conf >/dev/null <<'EOF'
+PubkeyAuthentication yes
+PasswordAuthentication yes
+UsePAM yes
+PermitRootLogin no
+EOF
+
+sudo sshd -t
+sudo systemctl restart sshd
+
+echo 'iriven ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/90-iriven
+sudo chmod 440 /etc/sudoers.d/90-iriven
+sudo visudo -cf /etc/sudoers.d/90-iriven
+
+idmloadbalancer 192.168.1.53
+
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.51/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.52/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.62/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.61/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.71/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.72/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.53/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli con mod "ens160" ipv4.addresses "192.168.1.54/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254 192.168.1.17" ipv4.method manual ipv6.method ignore
+sudo nmcli connection up ens160
+
+
+
+
+sudo nmcli con down ens160
+sudo nmcli con up ens160
+
+
+
+Name: rocky-idm-lab
+Generation: Generation 2
+RAM: 8 GB minimum (12 GB mieux)
+CPU: 4 vCPU minimum
+Disk: 100 GB dynamique
+Network: Default Switch ou External Switch
+ISO: Rocky Linux 9 Minimal ISO
+Secure Boot: Disabled si problème boot
+
+
+sudo dnf update -y
+sudo dnf install -y dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+
+
+sudo docker version
+sudo docker compose version
+
+
+sudo dnf install -y \
+git \
+vim \
+curl \
+wget \
+bind-utils \
+jq \
+tar \
+unzip \
+openssl \
+ansible-core \
+python3-pip
+
+ansible --version
+
+sudo ansible-galaxy collection install ansible.posix community.general community.crypto community.dns
+
+
+
+
+
+
+
+
+
+
+
+Ce qu’on va faire
+
+Ordre strict :
+
+PHASE 1 → golden image Rocky
+PHASE 2 → clone des VMs
+PHASE 3 → SSH + Ansible
+PHASE 4 → FreeIPA Primary
+PHASE 5 → Replica
+PHASE 6 → Clients enrollment
+PHASE 7 → Load balancer
+PHASE 8 → tests PRA / failover
+PHASE 1 — Golden Image (critique)
+
+Créer UNE VM parfaite :
+
+rocky10-template
+
+avec :
+
+Rocky 10 minimal
+OpenSSH
+sudo
+chrony
+python3
+firewalld
+vim/curl/wget
+cloud-init inutile
+SELinux permissive (lab)
+IP temporaire DHCP
+VMware tools
+
+Cette VM sera clonée.
+
+sudo dnf update -y
+sudo dnf install -y \
+vim \
+git \
+curl \
+wget \
+bind-utils \
+jq \
+tar \
+unzip \
+openssl \
+python3 \
+python3-pip \
+sudo \
+chrony \
+firewalld \
+openssh-server
+
+
+systemctl status sshd
+systemctl status chronyd
+systemctl status firewalld
+
+sudo vim /etc/selinux/config
+SELINUX=permissive
+
+sudo reboot
+
+getenforce
+
+sudo usermod -aG wheel iriven
+
+
+SSH Key (important)
+Depuis labdesktop :
+ssh-keygen -t ed25519
+Puis :
+ssh-copy-id root@future-vm-ip
+On évite les passwords partout.
+
+Désactiver cloud-init si présent
+Rare mais à vérifier :
+sudo systemctl disable cloud-init --now
+si installé.
+
+Nettoyage hostname template
+Le template ne doit PAS avoir hostname final.
+Mettre :
+sudo hostnamectl set-hostname idm-template
+
+Snapshot obligatoire
+Nom :
+TEMPLATE-CLEAN
+avant tout clonage.
+
+Ne PAS faire
+Ne pas configurer :
+
+
+IP statique définitive
+
+
+hostname final
+
+
+FreeIPA
+
+
+DNS final
+
+
+replica config
+
+
+ça vient après clone.
+
+Validation finale
+Exécuter :
+hostnamectlgetenforceip asystemctl status sshdansible --versiontimedatectl
+Tout doit être propre.
+
+Ensuite
+clone vers :idmprimaryaidmreplicabclientsnodeslb
+
+Maintenant
+Exécute ceci sur ta VM :
+hostnamectlgetenforceansible --versionip a
+et je valide si ton template est prêt pour le clonage.
+
+
+
+
+
+
+
+
+PHASE 2 — Clone
+
+Faire clones :
+
+idmprimarya
+idmreplicab
+idmclient1a
+etc.
+
+Puis :
+
+hostnamectl
+nmcli
+/etc/hosts
+
+sur chaque VM.
+
+sudo nmcli connection modify ens160 \
+ipv4.addresses 192.168.1.52/24 \
+ipv4.gateway 192.168.1.1 \
+ipv4.dns "192.168.1.51 1.1.1.1" \
+ipv4.method manual \
+connection.autoconnect yes
+
+sudo nmcli connection up ens160
+
+nmcli con mod "ens160" ipv4.addresses "192.168.1.52/24" ipv4.gateway "192.168.1.254" ipv4.dns "192.168.1.254" ipv4.method manual ipv6.method ignore
+sudo nmcli con up ens160
+
+hostnamectl set-hostname idmadmin.iriven.lab
+
+sudo nmcli con down ens160
+sudo nmcli con up ens160
+
+
+sudo nano /etc/hosts
+
+127.0.0.1   localhost
+::1         localhost
+
+192.168.1.51   idmprimarya.iriven.lab idmprimarya
+192.168.1.52   idmreplicab.iriven.lab idmreplicab
+192.168.1.50   idmadmin.iriven.lab idmadmin
+Chrony
+
+Installer / vérifier :
+
+sudo systemctl enable --now chronyd
+timedatectl
+chronyc sources
+
+Kerberos dépend fortement de ça.
+sudo systemctl enable --now chronyd
+timedatectl
+chronyc sources
+
+
+ssh-keygen -t ed25519 -C "iriven@idmadmin"
+
+ssh-copy-id iriven@192.168.1.4
+
+ssh iriven@192.168.1.51 "sudo -n true && hostname -f"
+
+sudo tee /etc/ssh/sshd_config.d/10-idm-lab.conf >/dev/null <<'EOF'
+PubkeyAuthentication yes
+PasswordAuthentication yes
+UsePAM yes
+PermitRootLogin no
+EOF
+
+sudo sshd -t
+sudo systemctl restart sshd
+
+echo 'iriven ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/90-iriven
+sudo chmod 440 /etc/sudoers.d/90-iriven
+sudo visudo -cf /etc/sudoers.d/90-iriven
+
+
+mkdir -p /opt/idm-lab/inventory
+vi /opt/idm-lab/inventory/hosts.ini
+
+# /opt/idm-lab/inventory/hosts.ini
+
+[idm_primary]
+idmprimarya ansible_host=192.168.1.51
+
+[idm_replica]
+idmreplicab ansible_host=192.168.1.52
+
+[idm_clients]
+idmclient1a ansible_host=192.168.1.61
+idmclient2a ansible_host=192.168.1.62
+idmclient1b ansible_host=192.168.1.71
+idmclient2b ansible_host=192.168.1.72
+
+[idm_nodes]
+idmnode1a ansible_host=192.168.1.63
+idmnode1b ansible_host=192.168.1.73
+
+[all:vars]
+ansible_user=iriven
+ansible_become=true
+ansible_become_method=sudo
+ansible_python_interpreter=/usr/bin/python3
+
+
+
+
+
+sudo ansible -i /opt/idm-lab/inventory/hosts.ini all -m ping
+sudo ansible -i /opt/idm-lab/inventory/hosts.ini idm_primary -a "hostname -f"
+sudo ansible -i /opt/idm-lab/inventory/hosts.ini idm_primary -b -a "whoami"
+
+
+PHASE 3 — Ansible
+
+Depuis labdesktop :
+
+sudo dnf install -y ansible git
+
+Créer :
+
+/opt/idm-lab/
+
+structure :
+
+inventory/
+group_vars/
+host_vars/
+roles/
+playbooks/
+Inventory minimal
+[idm_primary]
+idmprimarya ansible_host=192.168.1.51
+
+[idm_replica]
+idmreplicab ansible_host=192.168.1.52
+
+[idm_clients]
+idmclient1a ansible_host=192.168.1.61
+idmclient2a ansible_host=192.168.1.62
+idmclient1b ansible_host=192.168.1.71
+idmclient2b ansible_host=192.168.1.72
+
+[idm_nodes]
+idmnode1a ansible_host=192.168.1.63
+idmnode1b ansible_host=192.168.1.73
+Mon conseil important
+
+Ne commence PAS avec :
+
+replica
+LB
+multi-site
+failover
+
+Commence par :
+
+Primary seul
+
+jusqu’à :
+
+kinit admin
+ipa user-add
+ipa host-add
+client enrollment
+
+Ensuite replica.
+
+Toujours.
+
+
+
+
+ipa_dm_password: "Str0ngDirectoryPassw0rd!"
+
+
+sudo vi /run/chrony-dhcp/0-servers.conf
+
+
+sudo tee /run/chrony-dhcp/0-servers.conf >/dev/null <<'EOF'
+server idmloadbalancer.iriven.lab iburst
+EOF
+
+
+sudo tee /run/chrony-dhcp/0-servers.conf >/dev/null <<'EOF'
+server idmloadbalancer.iriven.lab iburst
+server idmprimarya.iriven.lab iburst
+server idmreplicab.iriven.lab iburst
+EOF
+
+sudo systemctl restart chronyd
+sleep 10
+chronyc sources
+timedatectl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

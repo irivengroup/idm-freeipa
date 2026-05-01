@@ -1,0 +1,8 @@
+---
+- name: Install FreeIPA primary
+  hosts: idm_primary
+  become: true
+  roles:
+    - common_hosts
+    - chrony_server
+    - ipa_primary

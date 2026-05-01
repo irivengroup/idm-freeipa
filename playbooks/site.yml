@@ -1,0 +1,12 @@
+---
+- import_playbook: 00-bootstrap-common.yml
+- import_playbook: 05-configure-chrony-servers.yml
+- import_playbook: 10-install-primary.yml
+- import_playbook: 20-install-replica.yml
+- import_playbook: 25-configure-dns-ntp-records.yml
+- import_playbook: 40-configure-loadbalancers.yml
+- import_playbook: 06-configure-chrony-clients.yml
+- import_playbook: 30-enroll-clients.yml
+- import_playbook: 50-configure-rbac.yml
+- import_playbook: 60-healthcheck.yml
+- import_playbook: 90-validate-platform.yml

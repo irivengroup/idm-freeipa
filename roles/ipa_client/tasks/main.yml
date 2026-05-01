@@ -1,0 +1,31 @@
+---
+- name: Install FreeIPA client packages
+  ansible.builtin.package:
+    name: "{{ idm_client_packages }}"
+    state: present
+
+- name: Check whether IPA client is already configured
+  ansible.builtin.stat:
+    path: /etc/ipa/default.conf
+  register: ipa_client_default_conf
+
+- name: Enroll client into FreeIPA
+  ansible.builtin.command:
+    argv:
+      - ipa-client-install
+      - -U
+      - --domain={{ idm_domain }}
+      - --realm={{ idm_realm }}
+      - --server={{ idm_lb_vip_fqdn }}
+      - --mkhomedir
+      - --force-join
+      - --principal={{ idm_admin_principal }}
+      - --password={{ idm_admin_password }}
+  no_log: true
+  when: not ipa_client_default_conf.stat.exists
+
+- name: Ensure SSSD is enabled and running
+  ansible.builtin.systemd:
+    name: sssd
+    enabled: true
+    state: started

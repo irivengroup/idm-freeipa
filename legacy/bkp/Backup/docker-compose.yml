@@ -12,8 +12,6 @@ services:
         ipv4_address: ${IPA_SERVER_IP}
     ports:
       - "2220:22"
-      - "8080:80"
-      - "443:443"
       - "389:389"
       - "636:636"
       - "88:88"
@@ -27,6 +25,19 @@ services:
       - /run
       - /tmp
     stop_signal: SIGRTMIN+3
+  ipa-nginx:
+    build:
+      context: ./nginx
+    container_name: ${IPA_NGINX_SHORTNAME}
+    depends_on:
+      - ipa-server
+    networks:
+      idm_net:
+        ipv4_address: ${IPA_NGINX_IP}
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
 
   ipa-client1:
     build:
@@ -81,7 +92,9 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.10.10.0/24
+        - subnet: 192.168.1.192/26
 
 volumes:
   ipa_data:
+
+

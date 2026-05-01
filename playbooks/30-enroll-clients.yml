@@ -1,0 +1,8 @@
+---
+- name: Enroll clients into FreeIPA
+  hosts: idm_clients:idm_admin
+  become: true
+  roles:
+    - common_hosts
+    - chrony_client
+    - ipa_client

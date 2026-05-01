@@ -1,0 +1,31 @@
+---
+- name: Ensure Kerberos, LDAP, and NTP SRV records exist
+  ansible.builtin.shell: |
+    set -euo pipefail
+    printf '%s\n' '{{ idm_admin_password }}' | kinit {{ idm_admin_principal }}
+
+    ipa dnsrecord-add {{ idm_domain }} _kerberos._tcp \
+      --srv-rec="0 100 88 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 88 {{ idm_replica_fqdn }}." 2>/dev/null || \
+    ipa dnsrecord-mod {{ idm_domain }} _kerberos._tcp \
+      --srv-rec="0 100 88 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 88 {{ idm_replica_fqdn }}."
+
+    ipa dnsrecord-add {{ idm_domain }} _ldap._tcp \
+      --srv-rec="0 100 389 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 389 {{ idm_replica_fqdn }}." 2>/dev/null || \
+    ipa dnsrecord-mod {{ idm_domain }} _ldap._tcp \
+      --srv-rec="0 100 389 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 389 {{ idm_replica_fqdn }}."
+
+    ipa dnsrecord-add {{ idm_domain }} _ntp._udp \
+      --srv-rec="0 100 123 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 123 {{ idm_replica_fqdn }}." 2>/dev/null || \
+    ipa dnsrecord-mod {{ idm_domain }} _ntp._udp \
+      --srv-rec="0 100 123 {{ idm_primary_fqdn }}." \
+      --srv-rec="0 100 123 {{ idm_replica_fqdn }}."
+  args:
+    executable: /bin/bash
+  no_log: true
+  changed_when: false
+  run_once: true

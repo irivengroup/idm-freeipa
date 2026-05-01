@@ -1,0 +1,6 @@
+---
+- name: Validate IDM platform
+  hosts: idm_all
+  become: true
+  roles:
+    - validation

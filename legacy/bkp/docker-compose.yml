@@ -1,0 +1,209 @@
+name: idmcluster
+
+x-ipa-common: &ipa-common
+  build:
+    context: ./server
+  privileged: true
+  cgroup: host
+  cgroup_parent: docker.slice
+  security_opt:
+    - seccomp=unconfined
+  volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup:rw
+  tmpfs:
+    - /run
+    - /tmp
+  sysctls:
+    net.ipv6.conf.all.disable_ipv6: "0"
+  environment:
+    DOMAIN: "${DOMAIN}"
+    REALM: "${REALM}"
+    IPA_ADMIN_PASSWORD: "${IPA_ADMIN_PASSWORD}"
+    IPA_DM_PASSWORD: "${IPA_DM_PASSWORD}"
+    DNS_FORWARDER_1: "${DNS_FORWARDER_1}"
+    DNS_FORWARDER_2: "${DNS_FORWARDER_2}"
+
+x-client-common: &client-common
+  build:
+    context: ./client
+  environment:
+    SSH_ROOT_PASSWORD: "${SSH_ROOT_PASSWORD}"
+
+services:
+  idm-primary:
+    <<: *ipa-common
+    container_name: idm-primary
+    hostname: idm-primary.${DOMAIN}
+    dns:
+      - 127.0.0.1
+    environment:
+      DOMAIN: "${DOMAIN}"
+      REALM: "${REALM}"
+      IPA_ADMIN_PASSWORD: "${IPA_ADMIN_PASSWORD}"
+      IPA_DM_PASSWORD: "${IPA_DM_PASSWORD}"
+      DNS_FORWARDER_1: "${DNS_FORWARDER_1}"
+      DNS_FORWARDER_2: "${DNS_FORWARDER_2}"
+      IDM_SERVER_ROLE: master
+      IPA_FQDN: idm-primary.${DOMAIN}
+    volumes:
+      - idm_primary_data:/data:Z
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      site_a:
+        ipv4_address: "${IPA_A_IP}"
+    ports:
+      - "1053:53/tcp"
+      - "1053:53/udp"
+      - "1088:88/tcp"
+      - "1088:88/udp"
+      - "1080:80/tcp"
+      - "1443:443/tcp"
+      - "1389:389/tcp"
+      - "1636:636/tcp"
+      - "1464:464/tcp"
+      - "1464:464/udp"
+      - "1123:123/udp"
+
+  idm-replica:
+    <<: *ipa-common
+    container_name: idm-replica
+    hostname: idm-replica.${DOMAIN}
+    dns:
+      - "${IPA_A_IP}"
+      - 127.0.0.1
+    environment:
+      DOMAIN: "${DOMAIN}"
+      REALM: "${REALM}"
+      IPA_ADMIN_PASSWORD: "${IPA_ADMIN_PASSWORD}"
+      IPA_DM_PASSWORD: "${IPA_DM_PASSWORD}"
+      DNS_FORWARDER_1: "${DNS_FORWARDER_1}"
+      DNS_FORWARDER_2: "${DNS_FORWARDER_2}"
+      IDM_SERVER_ROLE: replica
+      IDM_MASTER_HOST: idm-primary.${DOMAIN}
+      IDM_AUTO_REPLICA_INSTALL: "false"
+      IPA_FQDN: idm-replica.${DOMAIN}
+    volumes:
+      - idm_replica_data:/data:Z
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      site_a:
+      site_b:
+        ipv4_address: "${IPA_B_IP}"
+    ports:
+      - "2053:53/tcp"
+      - "2053:53/udp"
+      - "2088:88/tcp"
+      - "2088:88/udp"
+      - "2080:80/tcp"
+      - "2443:443/tcp"
+      - "2389:389/tcp"
+      - "2636:636/tcp"
+      - "2464:464/tcp"
+      - "2464:464/udp"
+      - "2123:123/udp"
+
+  idm-loadbalancer:
+    image: nginx:stable
+    container_name: idm-loadbalancer
+    depends_on:
+      - idm-primary
+      - idm-replica
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      site_a:
+        ipv4_address: "${NGINX_A_IP}"
+      site_b:
+        ipv4_address: "${NGINX_B_IP}"
+    ports:
+      - "8080:80/tcp"
+      - "8443:443/tcp"
+      - "8389:389/tcp"
+      - "8636:636/tcp"
+      - "8053:53/tcp"
+      - "8053:53/udp"
+      - "8088:88/tcp"
+      - "8088:88/udp"
+      - "8464:464/tcp"
+      - "8464:464/udp"
+
+  client-a1:
+    <<: *client-common
+    container_name: client-a1
+    hostname: client-a1.${DOMAIN}
+    dns:
+      - "${IPA_A_IP}"
+    networks:
+      site_a:
+        ipv4_address: "${CLIENT_A1_IP}"
+
+  client-a2:
+    <<: *client-common
+    container_name: client-a2
+    hostname: client-a2.${DOMAIN}
+    dns:
+      - "${IPA_A_IP}"
+    networks:
+      site_a:
+        ipv4_address: "${CLIENT_A2_IP}"
+
+  node-a:
+    <<: *client-common
+    container_name: node-a
+    hostname: node-a.${DOMAIN}
+    dns:
+      - "${IPA_A_IP}"
+    networks:
+      site_a:
+        ipv4_address: "${NODE_A_IP}"
+
+  client-b1:
+    <<: *client-common
+    container_name: client-b1
+    hostname: client-b1.${DOMAIN}
+    dns:
+      - "${IPA_B_IP}"
+      - "${IPA_A_IP}"
+    networks:
+      site_b:
+        ipv4_address: "${CLIENT_B1_IP}"
+
+  client-b2:
+    <<: *client-common
+    container_name: client-b2
+    hostname: client-b2.${DOMAIN}
+    dns:
+      - "${IPA_B_IP}"
+      - "${IPA_A_IP}"
+    networks:
+      site_b:
+        ipv4_address: "${CLIENT_B2_IP}"
+
+  node-b:
+    <<: *client-common
+    container_name: node-b
+    hostname: node-b.${DOMAIN}
+    dns:
+      - "${IPA_B_IP}"
+      - "${IPA_A_IP}"
+    networks:
+      site_b:
+        ipv4_address: "${NODE_B_IP}"
+
+networks:
+  site_a:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "${SITE_A_SUBNET}"
+          gateway: "${SITE_A_GW}"
+  site_b:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "${SITE_B_SUBNET}"
+          gateway: "${SITE_B_GW}"
+
+volumes:
+  idm_primary_data:
+  idm_replica_data:

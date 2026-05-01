@@ -1,0 +1,41 @@
+---
+- name: Configure baseline IPA groups, hostgroups, sudo rules, and HBAC rules
+  ansible.builtin.shell: |
+    set -euo pipefail
+    printf '%s\n' '{{ idm_admin_password }}' | kinit {{ idm_admin_principal }}
+
+    ipa group-show linux-admins >/dev/null 2>&1 || ipa group-add linux-admins --desc='Linux administrators'
+    ipa group-show idm-admins >/dev/null 2>&1 || ipa group-add idm-admins --desc='FreeIPA administrators'
+    ipa group-show breakglass-admins >/dev/null 2>&1 || ipa group-add breakglass-admins --desc='Emergency privileged administrators'
+
+    ipa hostgroup-show idm-servers >/dev/null 2>&1 || ipa hostgroup-add idm-servers --desc='FreeIPA servers'
+    ipa hostgroup-add-member idm-servers \
+      --hosts={{ idm_primary_fqdn }} \
+      --hosts={{ idm_replica_fqdn }} >/dev/null 2>&1 || true
+
+    ipa sudorule-show sudo-linux-admins >/dev/null 2>&1 || ipa sudorule-add sudo-linux-admins
+    ipa sudorule-add-user sudo-linux-admins --groups=linux-admins >/dev/null 2>&1 || true
+    ipa sudorule-mod sudo-linux-admins --hostcat=all --cmdcat=all >/dev/null
+    ipa sudorule-add-option sudo-linux-admins --sudooption='!authenticate' >/dev/null 2>&1 || true
+
+    ipa sudorule-show sudo-idm-admins >/dev/null 2>&1 || ipa sudorule-add sudo-idm-admins
+    ipa sudorule-add-user sudo-idm-admins --groups=idm-admins >/dev/null 2>&1 || true
+    ipa sudorule-add-host sudo-idm-admins --hostgroups=idm-servers >/dev/null 2>&1 || true
+    ipa sudorule-mod sudo-idm-admins --cmdcat=all >/dev/null
+
+    ipa hbacrule-show allow-linux-admins >/dev/null 2>&1 || ipa hbacrule-add allow-linux-admins
+    ipa hbacrule-add-user allow-linux-admins --groups=linux-admins >/dev/null 2>&1 || true
+    ipa hbacrule-mod allow-linux-admins --hostcat=all >/dev/null
+    ipa hbacrule-add-service allow-linux-admins --hbacsvcs=sshd >/dev/null 2>&1 || true
+    ipa hbacrule-enable allow-linux-admins >/dev/null 2>&1 || true
+
+    ipa hbacrule-show allow-idm-admins >/dev/null 2>&1 || ipa hbacrule-add allow-idm-admins
+    ipa hbacrule-add-user allow-idm-admins --groups=idm-admins >/dev/null 2>&1 || true
+    ipa hbacrule-add-host allow-idm-admins --hostgroups=idm-servers >/dev/null 2>&1 || true
+    ipa hbacrule-add-service allow-idm-admins --hbacsvcs=sshd >/dev/null 2>&1 || true
+    ipa hbacrule-enable allow-idm-admins >/dev/null 2>&1 || true
+  args:
+    executable: /bin/bash
+  no_log: true
+  changed_when: false
+  run_once: true

@@ -1,0 +1,6 @@
+---
+- name: Configure baseline IPA RBAC, sudo, and HBAC
+  hosts: idm_primary
+  become: true
+  roles:
+    - ipa_rbac

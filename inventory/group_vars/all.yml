@@ -1,0 +1,44 @@
+---
+# Global project defaults
+idm_domain: iriven.lab
+idm_realm: IRIVEN.LAB
+idm_net_cidr: 192.168.1.0/24
+idm_reverse_zone: 1.168.192.in-addr.arpa.
+
+idm_primary_hostname: idmprimarya
+idm_replica_hostname: idmreplicab
+idm_primary_ip: 192.168.1.51
+idm_replica_ip: 192.168.1.52
+idm_primary_fqdn: "{{ idm_primary_hostname }}.{{ idm_domain }}"
+idm_replica_fqdn: "{{ idm_replica_hostname }}.{{ idm_domain }}"
+
+idm_lb_vip: 192.168.1.55
+idm_lb_vip_fqdn: idmloadbalancer.iriven.lab
+idm_lb_stats_port: 8404
+
+idm_dns_forwarders:
+  - 1.1.1.1
+  - 8.8.8.8
+
+idm_ntp_servers:
+  - "{{ idm_primary_fqdn }}"
+  - "{{ idm_replica_fqdn }}"
+
+idm_client_packages:
+  - freeipa-client
+  - oddjob
+  - oddjob-mkhomedir
+  - sssd
+
+idm_server_packages:
+  - freeipa-server
+  - freeipa-server-dns
+  - ipa-healthcheck
+
+idm_lb_packages:
+  - haproxy
+  - keepalived
+
+idm_disable_nodes:
+  - idmnode1a
+  - idmnode1b
