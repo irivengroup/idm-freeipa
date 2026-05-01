@@ -13,7 +13,7 @@ The project uses roles to keep playbooks short and predictable.
 | chrony_client | NTP client configuration on clients/LBs/admin |
 | ipa_primary | FreeIPA primary installation and service setup |
 | ipa_replica | FreeIPA replica installation and service setup |
-| ipa_client | FreeIPA client enrollment |
+| ipa_client | FreeIPA client enrollment and IPA DNS resolver configuration |
 | haproxy_freeipa_lb | HAProxy and Keepalived configuration |
 | ipa_dns_ntp | DNS SRV records for Kerberos/LDAP/NTP |
 | ipa_rbac | Baseline groups, sudo and HBAC policies |
@@ -40,6 +40,13 @@ The project uses roles to keep playbooks short and predictable.
 - Keepalived tracks HAProxy health.
 - Chrony is configured before IPA-sensitive validations.
 - Replica and primary are both checked independently.
+
+</details>
+
+<details>
+<summary><strong>Client DNS resilience</strong></summary>
+
+The `ipa_client` role manages `NetworkManager` before enrollment and points clients to the IdM DNS servers declared through the `idm_servers` inventory group. This avoids enrollment failures caused by external DNS resolvers that cannot resolve `iriven.lab` or FreeIPA SRV records.
 
 </details>
 

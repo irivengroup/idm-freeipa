@@ -12,6 +12,9 @@ idm_replica_ip: 192.168.1.52
 idm_primary_fqdn: "{{ idm_primary_hostname }}.{{ idm_domain }}"
 idm_replica_fqdn: "{{ idm_replica_hostname }}.{{ idm_domain }}"
 
+idm_primary_host: "{{ idm_primary_hostname }}"
+idm_replica_host: "{{ idm_replica_hostname }}"
+
 idm_lb_vip: 192.168.1.55
 idm_lb_vip_fqdn: idmloadbalancer.iriven.lab
 idm_lb_stats_port: 8404
@@ -42,3 +45,7 @@ idm_lb_packages:
 idm_disable_nodes:
   - idmnode1a
   - idmnode1b
+# Client DNS behavior during IPA enrollment.
+# The ipa_client role configures the active NetworkManager connection to use
+# IPA DNS servers derived from the idm_servers inventory group.
+
