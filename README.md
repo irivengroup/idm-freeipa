@@ -238,3 +238,9 @@ Ce projet permet de pratiquer :
 * architecture IDM proche production
 
 L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.
+
+---
+
+## Authors
+
+* **Alfred TCHONDJO** - *Project Initiator* - [Iriven Group](https://www.facebook.com/Tchalf)
