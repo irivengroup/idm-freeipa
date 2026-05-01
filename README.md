@@ -2,28 +2,31 @@
 
 ## 1. Présentation
 
-**IRIVEN IDM Lab** est une infrastructure professionnelle de laboratoire et de validation pour **Red Hat Identity Management (IdM) / FreeIPA** déployée sur **Rocky Linux 10** avec automatisation complète via **Ansible**.
+**IRIVEN IDM Lab** est une infrastructure de laboratoire professionnelle pour déployer, automatiser et valider une plateforme **Red Hat Identity Management (IdM) / FreeIPA** sur **Rocky Linux 10**.
 
-Le projet simule une architecture proche production avec :
+Le projet fournit un socle proche production, piloté par **Ansible**, avec une attention particulière portée à l’idempotence, à la résilience et à la maintenabilité.
 
-* FreeIPA Primary
-* FreeIPA Replica
-* Load Balancers HAProxy
-* DNS intégré
-* Kerberos
-* LDAP / LDAPS
-* PKI
-* réplication multi-site
-* clients enrôlés IPA
-* gestion NTP centralisée (serveurs + clients)
-* règles sudo
-* règles HBAC
-* RBAC orienté production
-* healthchecks et validations post-déploiement
+Il couvre notamment :
 
-L’objectif est de fournir un socle robuste, idempotent et maintenable pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements proches production.
+- FreeIPA Primary + Replica
+- DNS intégré
+- Kerberos
+- LDAP / LDAPS
+- PKI
+- réplication IdM
+- clients Linux enrôlés
+- HAProxy + Keepalived
+- VIP d’accès IdM
+- Chrony / NTP côté serveurs et clients
+- SSSD
+- sudo rules
+- HBAC rules
+- matrice RBAC production-grade
+- healthchecks et validations post-déploiement
 
-→ Documentation complète : [docs/index.md](docs/index.md)
+Documentation complète : [docs/index.md](docs/index.md)
+
+L’objectif est de fournir un socle robuste pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements proches production.
 
 ---
 
@@ -72,26 +75,26 @@ idmloadbalancer.iriven.lab
 | Client B2       | idmclient2b      | idmclient2b.iriven.lab      |
 | Admin Host      | idmadmin         | idmadmin.iriven.lab         |
 
+
 ---
 
-## 4. Principes de robustesse intégrés
+## 4. Structure du projet
 
-Cette version intègre les corrections et bonnes pratiques validées pendant les tests :
-
-* playbooks idempotents
-* rôles Ansible séparés par responsabilité
-* variables centralisées dans `inventory/group_vars/`
-* aucune duplication de configuration
-* mises à jour contrôlées plutôt que réécriture brutale
-* validation systématique post-déploiement
-* configuration NTP cohérente serveurs + clients
-* HAProxy compatible FreeIPA
-* suppression des erreurs de bind socket
-* gestion correcte des services systemd
-* healthcheck IPA intégré
-* règles sudo/HBAC structurées
-* séparation RBAC par groupes métiers
-* support du failover IPA via LB
+```text
+idm-lab/
+├── ansible.cfg
+├── inventory/
+│   ├── hosts.ini
+│   └── group_vars/
+│       └── all/
+│           ├── common.yml
+│           ├── rbac.yml
+│           └── vault.yml.example
+├── playbooks/
+├── roles/
+├── docs/
+└── README.md
+```
 
 ---
 
@@ -99,54 +102,67 @@ Cette version intègre les corrections et bonnes pratiques validées pendant les
 
 Déploiement depuis `idmadmin` :
 
+Déploiement complet :
+
 ```bash
-cd /opt/idm-lab
 ansible-playbook -i inventory/hosts.ini playbooks/site.yml
 ```
 
-Déploiement par domaine :
+Déploiement ciblé (par domaine ):
 
 ```bash
-ansible-playbook -i inventory/hosts.ini playbooks/freeipa.yml
-ansible-playbook -i inventory/hosts.ini playbooks/loadbalancers.yml
-ansible-playbook -i inventory/hosts.ini playbooks/clients.yml
-ansible-playbook -i inventory/hosts.ini playbooks/chrony.yml
-ansible-playbook -i inventory/hosts.ini playbooks/rbac.yml
+ansible-playbook -i inventory/hosts.ini playbooks/10-install-primary.yml
+ansible-playbook -i inventory/hosts.ini playbooks/20-install-replica.yml
+ansible-playbook -i inventory/hosts.ini playbooks/40-configure-loadbalancers.yml
+ansible-playbook -i inventory/hosts.ini playbooks/50-configure-rbac.yml
 ```
 
-### Prise en main Rapide en production
+### Prise en main Rapide (production)
 
 ```bash
 cd /opt/idm-lab
 ansible-galaxy collection install -r requirements.yml
-cp inventory/group_vars/vault.yml.example inventory/group_vars/vault.yml
-ansible-vault encrypt inventory/group_vars/vault.yml
+cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
+ansible-vault encrypt inventory/group_vars/all/vault.yml
 ansible-playbook --ask-vault-pass playbooks/site.yml
 ```
 
 ---
 
-## 6. Validation opérationnelle
-
-Exemples de vérification :
+## 6. Validation rapide (opérationnelle)
 
 ```bash
-ipactl status
-ipa-healthcheck --output-type human
+ansible -i inventory/hosts.ini idm_servers -b -m shell -a 'ipactl status'
+ansible -i inventory/hosts.ini idm_servers -b -m shell -a 'ipa-healthcheck --output-type human || true'
+ansible -i inventory/hosts.ini idm_all -b -m shell -a 'chronyc sources || true'
+```
+
+Autres Exemples de vérification :
+
+```bash
 ipa host-find
 ipa dnsrecord-find iriven.lab --name=_ldap._tcp
-chronyc sources
 systemctl status sssd
 ```
 
 Validation client :
 
 ```bash
-id admin
-getent passwd admin
 klist -k
 sssctl domain-status iriven.lab
+id admin
+getent passwd admin
 ```
+
+Validation RBAC :
+
+```bash
+ipa group-find --sizelimit=0
+ipa hostgroup-find --sizelimit=0
+ipa sudorule-find --sizelimit=0
+ipa hbacrule-find --sizelimit=0
+```
+
 
 Validation SSH / sudo :
 
@@ -158,24 +174,66 @@ sudo whoami
 
 ---
 
-## 7. Structure du projet
+## 7. Points de robustesse intégrés
 
-```text
-idm-lab/
-├── inventory/
-│   ├── hosts.ini
-│   └── group_vars/
-├── playbooks/
-├── roles/
-├── templates/
-├── docs/
-├── README.md
-└── ansible.cfg
-```
+Cette version intègre :
+
+- variables projet centralisées dans `inventory/group_vars/all/common.yml`
+- matrice RBAC dans `inventory/group_vars/all/rbac.yml`
+- inventory utilisé comme source de vérité des hosts
+- groupe `[idm_servers:children]` pour primary + replica
+- rôles Ansible par responsabilité
+- playbooks courts appelant les rôles
+- configuration NTP serveur/client
+- configuration HAProxy résiliente
+- RBAC/HBAC/sudo idempotents
+- hostgroups IPA construits depuis l’inventaire
+- playbooks compatibles avec ajouts futurs `app_servers`, `db_servers`, `jump_hosts`
 
 ---
 
-## 8. Commandes utiles
+## 8. Limites connues
+
+Ce projet reste un lab avancé. Pour une production réelle, compléter avec :
+
+- sauvegardes automatisées et testées
+- restauration documentée
+- supervision centralisée
+- centralisation des logs
+- rotation des secrets
+- MFA
+- PRA / PCA
+- durcissement TLS/PKI
+- procédures de patching
+- segmentation réseau formelle
+
+---
+
+## 9. Finalité pédagogique
+
+Ce lab permet de pratiquer une architecture IdM complète :
+
+- Déploiement FreeIPA Primary / Replica
+- DNS intégré
+- Kerberos
+- LDAP / LDAPS
+- réplication
+- enrollment client
+- SSSD
+- HAProxy + failover
+- chrony / NTP maîtrisé
+- sudo IPA
+- HBAC
+- RBAC production-grade
+- validation de résilience
+- exploitation automatisée avec Ansible
+
+L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.
+
+---
+
+
+## 10. Commandes utiles
 
 Exécution ciblée :
 
@@ -199,48 +257,6 @@ chronyc sources
 
 ---
 
-## 9. Limites connues
-
-Ce projet reste un **lab avancé orienté production**.
-
-Pour un environnement réel, il faut compléter avec :
-
-* stratégie de backup/restauration
-* supervision centralisée
-* PRA / PCA
-* rotation des secrets
-* MFA
-* centralisation des logs
-* PKI durcie
-* audit sudo avancé
-* patch management
-* segmentation réseau réelle
-
----
-
-## 10. Finalité pédagogique
-
-Ce projet permet de pratiquer :
-
-* déploiement FreeIPA Primary / Replica
-* DNS intégré
-* Kerberos
-* LDAP / LDAPS
-* réplication
-* enrollment client
-* SSSD
-* HAProxy + failover
-* chrony / NTP maîtrisé
-* sudo rules
-* HBAC
-* RBAC
-* validation de résilience
-* architecture IDM proche production
-
-L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.
-
----
-
-## Authors
+## 11. Authors
 
 * **Alfred TCHONDJO** - *Project Initiator* - [Iriven Group](https://www.facebook.com/Tchalf)

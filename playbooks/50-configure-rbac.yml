@@ -1,6 +1,8 @@
 ---
-- name: Configure baseline IPA RBAC, sudo, and HBAC
+- name: Configure FreeIPA production-grade RBAC, HBAC and sudo policies
   hosts: idm_primary
   become: true
+  gather_facts: false
+
   roles:
     - ipa_rbac
