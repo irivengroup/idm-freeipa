@@ -1,4 +1,4 @@
-# IRIVEN IDMCluster — FreeIPA / RedHat IdM Lab sur Rocky Linux 10
+# IRIVEN IDM Lab — FreeIPA / Red Hat IdM sur Rocky Linux 10
 
 ## 1. Présentation
 
@@ -112,16 +112,6 @@ ansible-playbook -i inventory/hosts.ini playbooks/loadbalancers.yml
 ansible-playbook -i inventory/hosts.ini playbooks/clients.yml
 ansible-playbook -i inventory/hosts.ini playbooks/chrony.yml
 ansible-playbook -i inventory/hosts.ini playbooks/rbac.yml
-```
-
-### Prise en main Rapide en production
-
-```bash
-cd /opt/idm-lab
-ansible-galaxy collection install -r requirements.yml
-cp inventory/group_vars/vault.yml.example inventory/group_vars/vault.yml
-ansible-vault encrypt inventory/group_vars/vault.yml
-ansible-playbook --ask-vault-pass playbooks/site.yml
 ```
 
 ---
