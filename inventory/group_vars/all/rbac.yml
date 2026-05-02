@@ -33,4 +33,3 @@ idm_rbac_hostgroups:
 
   - name: jump-hosts
     desc: "Bastion and administration hosts"
-    
