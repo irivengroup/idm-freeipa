@@ -1,7 +1,7 @@
 ---
 name: Security checks
 
-on:
+"on":
   push:
     branches: [main, master, develop]
   pull_request:
@@ -21,15 +21,20 @@ jobs:
 
       - name: Check that vault file is not committed
         run: |
-          if [ -f inventory/group_vars/all/vault.yml ]; then
-            echo "::error::inventory/group_vars/all/vault.yml must not be committed. Use vault.yml.example instead."
+          vault_file="inventory/group_vars/all/vault.yml"
+          if [ -f "$vault_file" ]; then
+            echo "::error::${vault_file} must not be committed. Use vault.yml.example instead."
             exit 1
           fi
 
       - name: Detect obvious plaintext secrets
         run: |
           set +e
-          grep -RInE "(password|passwd|secret|token|apikey|api_key)[[:space:]]*[:=][[:space:]]*['\"]?[^'\" ]+" . --exclude-dir=.git --exclude="vault.yml.example" --exclude="*.md"
+          secret_regex="(password|passwd|secret|token|apikey|api_key)"
+          grep -RInE "${secret_regex}[[:space:]]*[:=][[:space:]]*['\"]?[^'\" ]+" . \
+            --exclude-dir=.git \
+            --exclude="vault.yml.example" \
+            --exclude="*.md"
           rc=$?
           if [ "$rc" -eq 0 ]; then
             echo "::warning::Potential plaintext secret found. Review output carefully."

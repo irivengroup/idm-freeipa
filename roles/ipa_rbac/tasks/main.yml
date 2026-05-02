@@ -3,7 +3,7 @@
   ansible.builtin.shell: |
     set -euo pipefail
     kdestroy >/dev/null 2>&1 || true
-    printf '%s\n' '{{ idm_admin_password }}' | kinit {{ idm_admin_principal | default('admin') }}
+    printf '%s\n' '{{idm_admin_password}}' | kinit {{idm_admin_principal | default('admin')}}
   args:
     executable: /bin/bash
   no_log: true
@@ -14,8 +14,7 @@
   ansible.builtin.set_fact:
     idm_rbac_hostgroup_members:
       linux-all: >-
-        {{
-          (
+        {{(
             groups.get('idm_servers', []) +
             groups.get('idm_clients', []) +
             groups.get('idm_loadbalancers', []) +
@@ -23,30 +22,27 @@
             groups.get('app_servers', []) +
             groups.get('db_servers', []) +
             groups.get('jump_hosts', [])
-          ) | unique
-        }}
-      idm-servers: "{{ groups.get('idm_servers', []) | unique }}"
-      app-servers: "{{ groups.get('app_servers', []) | default([]) | unique }}"
-      db-servers: "{{ groups.get('db_servers', []) | default([]) | unique }}"
+          ) | unique}}
+      idm-servers: "{{groups.get('idm_servers', []) | unique}}"
+      app-servers: "{{groups.get('app_servers', []) | default([]) | unique}}"
+      db-servers: "{{groups.get('db_servers', []) | default([]) | unique}}"
       jump-hosts: >-
-        {{
-          (groups.get('jump_hosts', []) if (groups.get('jump_hosts', []) | length > 0)
-           else groups.get('idm_admin', [])) | unique
-        }}
+        {{(groups.get('jump_hosts', []) if (groups.get('jump_hosts', []) | length > 0)
+           else groups.get('idm_admin', [])) | unique}}
   run_once: true
 
 - name: Ensure RBAC user groups exist
   ansible.builtin.shell: |
     set -euo pipefail
-    if ipa group-show {{ item.name }} >/dev/null 2>&1; then
-      ipa group-mod {{ item.name }} --desc="{{ item.desc }}" >/dev/null
+    if ipa group-show {{item.name}} >/dev/null 2>&1; then
+      ipa group-mod {{item.name}} --desc="{{item.desc}}" >/dev/null
     else
-      ipa group-add {{ item.name }} --desc="{{ item.desc }}" >/dev/null
+      ipa group-add {{item.name}} --desc="{{item.desc}}" >/dev/null
       echo changed
     fi
   args:
     executable: /bin/bash
-  loop: "{{ idm_rbac_user_groups }}"
+  loop: "{{idm_rbac_user_groups}}"
   register: ipa_rbac_user_group_result
   changed_when: "'changed' in ipa_rbac_user_group_result.stdout"
   run_once: true
@@ -54,15 +50,15 @@
 - name: Ensure IPA hostgroups exist
   ansible.builtin.shell: |
     set -euo pipefail
-    if ipa hostgroup-show {{ item.name }} >/dev/null 2>&1; then
-      ipa hostgroup-mod {{ item.name }} --desc="{{ item.desc }}" >/dev/null
+    if ipa hostgroup-show {{item.name}} >/dev/null 2>&1; then
+      ipa hostgroup-mod {{item.name}} --desc="{{item.desc}}" >/dev/null
     else
-      ipa hostgroup-add {{ item.name }} --desc="{{ item.desc }}" >/dev/null
+      ipa hostgroup-add {{item.name}} --desc="{{item.desc}}" >/dev/null
       echo changed
     fi
   args:
     executable: /bin/bash
-  loop: "{{ idm_rbac_hostgroups }}"
+  loop: "{{idm_rbac_hostgroups}}"
   register: ipa_rbac_hostgroup_result
   changed_when: "'changed' in ipa_rbac_hostgroup_result.stdout"
   run_once: true
@@ -70,16 +66,16 @@
 - name: Ensure hosts are members of IPA hostgroups
   ansible.builtin.shell: |
     set -euo pipefail
-    host_fqdn="{{ item.1 if '.' in item.1 else item.1 ~ '.' ~ idm_domain }}"
+    host_fqdn="{{item.1 if '.' in item.1 else item.1 ~ '.' ~ idm_domain}}"
     ipa host-show "$host_fqdn" >/dev/null 2>&1 || exit 0
-    if ipa hostgroup-show {{ item.0.key }} --all | grep -Fq "$host_fqdn"; then
+    if ipa hostgroup-show {{item.0.key}} --all | grep -Fq "$host_fqdn"; then
       exit 0
     fi
-    ipa hostgroup-add-member {{ item.0.key }} --hosts="$host_fqdn" >/dev/null 2>&1 || true
+    ipa hostgroup-add-member {{item.0.key}} --hosts="$host_fqdn" >/dev/null 2>&1 || true
     echo changed
   args:
     executable: /bin/bash
-  loop: "{{ idm_rbac_hostgroup_members | dict2items | subelements('value') }}"
+  loop: "{{idm_rbac_hostgroup_members | dict2items | subelements('value')}}"
   register: ipa_rbac_host_membership_result
   changed_when: "'changed' in ipa_rbac_host_membership_result.stdout"
   run_once: true
@@ -87,14 +83,14 @@
 - name: Ensure sudo command objects exist for limited rules
   ansible.builtin.shell: |
     set -euo pipefail
-    if ipa sudocmd-show {{ item | quote }} >/dev/null 2>&1; then
+    if ipa sudocmd-show {{item | quote}} >/dev/null 2>&1; then
       exit 0
     fi
-    ipa sudocmd-add {{ item | quote }} >/dev/null
+    ipa sudocmd-add {{item | quote}} >/dev/null
     echo changed
   args:
     executable: /bin/bash
-  loop: "{{ (idm_rbac_security_readonly_commands + idm_rbac_devops_commands + idm_rbac_db_commands) | unique }}"
+  loop: "{{(idm_rbac_security_readonly_commands + idm_rbac_devops_commands + idm_rbac_db_commands) | unique}}"
   register: ipa_rbac_sudocmd_result
   changed_when: "'changed' in ipa_rbac_sudocmd_result.stdout"
   run_once: true
@@ -144,7 +140,7 @@
     ipa sudorule-add-host sudo-security-auditors --hostgroups=linux-all >/dev/null 2>&1 || true
     ipa sudorule-mod sudo-security-auditors --cmdcat='' >/dev/null 2>&1 || true
     {% for cmd in idm_rbac_security_readonly_commands %}
-    ipa sudorule-add-allow-command sudo-security-auditors --sudocmds={{ cmd | quote }} >/dev/null 2>&1 || true
+    ipa sudorule-add-allow-command sudo-security-auditors --sudocmds={{cmd | quote}} >/dev/null 2>&1 || true
     {% endfor %}
   args:
     executable: /bin/bash
@@ -159,7 +155,7 @@
     ipa sudorule-add-host sudo-devops-admins --hostgroups=app-servers >/dev/null 2>&1 || true
     ipa sudorule-mod sudo-devops-admins --cmdcat='' >/dev/null 2>&1 || true
     {% for cmd in idm_rbac_devops_commands %}
-    ipa sudorule-add-allow-command sudo-devops-admins --sudocmds={{ cmd | quote }} >/dev/null 2>&1 || true
+    ipa sudorule-add-allow-command sudo-devops-admins --sudocmds={{cmd | quote}} >/dev/null 2>&1 || true
     {% endfor %}
   args:
     executable: /bin/bash
@@ -174,7 +170,7 @@
     ipa sudorule-add-host sudo-db-admins --hostgroups=db-servers >/dev/null 2>&1 || true
     ipa sudorule-mod sudo-db-admins --cmdcat='' >/dev/null 2>&1 || true
     {% for cmd in idm_rbac_db_commands %}
-    ipa sudorule-add-allow-command sudo-db-admins --sudocmds={{ cmd | quote }} >/dev/null 2>&1 || true
+    ipa sudorule-add-allow-command sudo-db-admins --sudocmds={{cmd | quote}} >/dev/null 2>&1 || true
     {% endfor %}
   args:
     executable: /bin/bash
@@ -184,26 +180,26 @@
 - name: Ensure HBAC rules exist
   ansible.builtin.shell: |
     set -euo pipefail
-    ipa hbacrule-show {{ item.rule }} >/dev/null 2>&1 || ipa hbacrule-add {{ item.rule }} >/dev/null
-    ipa hbacrule-add-user {{ item.rule }} --groups={{ item.group }} >/dev/null 2>&1 || true
-    ipa hbacrule-add-host {{ item.rule }} --hostgroups={{ item.hostgroup }} >/dev/null 2>&1 || true
-    ipa hbacrule-add-service {{ item.rule }} --hbacsvcs={{ idm_rbac_hbac_service }} >/dev/null 2>&1 || true
-    ipa hbacrule-enable {{ item.rule }} >/dev/null 2>&1 || true
+    ipa hbacrule-show {{item.rule}} >/dev/null 2>&1 || ipa hbacrule-add {{item.rule}} >/dev/null
+    ipa hbacrule-add-user {{item.rule}} --groups={{item.group}} >/dev/null 2>&1 || true
+    ipa hbacrule-add-host {{item.rule}} --hostgroups={{item.hostgroup}} >/dev/null 2>&1 || true
+    ipa hbacrule-add-service {{item.rule}} --hbacsvcs={{idm_rbac_hbac_service}} >/dev/null 2>&1 || true
+    ipa hbacrule-enable {{item.rule}} >/dev/null 2>&1 || true
   args:
     executable: /bin/bash
   loop:
-    - { rule: "allow-linux-admins", group: "linux-admins", hostgroup: "linux-all" }
-    - { rule: "allow-idm-admins", group: "idm-admins", hostgroup: "idm-servers" }
-    - { rule: "allow-devops-admins", group: "devops-admins", hostgroup: "app-servers" }
-    - { rule: "allow-db-admins", group: "db-admins", hostgroup: "db-servers" }
-    - { rule: "allow-security-auditors", group: "security-auditors", hostgroup: "linux-all" }
-    - { rule: "allow-breakglass-admins", group: "breakglass-admins", hostgroup: "linux-all" }
+    - {rule: "allow-linux-admins", group: "linux-admins", hostgroup: "linux-all"}
+    - {rule: "allow-idm-admins", group: "idm-admins", hostgroup: "idm-servers"}
+    - {rule: "allow-devops-admins", group: "devops-admins", hostgroup: "app-servers"}
+    - {rule: "allow-db-admins", group: "db-admins", hostgroup: "db-servers"}
+    - {rule: "allow-security-auditors", group: "security-auditors", hostgroup: "linux-all"}
+    - {rule: "allow-breakglass-admins", group: "breakglass-admins", hostgroup: "linux-all"}
   changed_when: false
   run_once: true
 
 - name: Attach idm-admins group to built-in FreeIPA roles when present
   ansible.builtin.shell: |
-    ipa role-add-member {{ item | quote }} --groups=idm-admins >/dev/null 2>&1 || true
+    ipa role-add-member {{item | quote}} --groups=idm-admins >/dev/null 2>&1 || true
   args:
     executable: /bin/bash
   loop:
