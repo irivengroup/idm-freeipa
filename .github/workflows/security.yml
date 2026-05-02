@@ -1,3 +1,4 @@
+---
 name: Security checks
 
 on:
@@ -28,7 +29,7 @@ jobs:
       - name: Detect obvious plaintext secrets
         run: |
           set +e
-          grep -RInE "(password|passwd|secret|token|apikey|api_key)[[:space:]]*[:=][[:space:]]*['\"]?[^'\" ]+" .             --exclude-dir=.git             --exclude="vault.yml.example"             --exclude="*.md"
+          grep -RInE "(password|passwd|secret|token|apikey|api_key)[[:space:]]*[:=][[:space:]]*['\"]?[^'\" ]+" . --exclude-dir=.git --exclude="vault.yml.example" --exclude="*.md"
           rc=$?
           if [ "$rc" -eq 0 ]; then
             echo "::warning::Potential plaintext secret found. Review output carefully."
