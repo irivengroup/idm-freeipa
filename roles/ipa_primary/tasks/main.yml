@@ -25,7 +25,7 @@
     path: /etc/ipa/default.conf
   register: ipa_primary_default_conf
 
-- name: Install FreeIPA primary server
+- name: Install FreeIPA primary server packages
   ansible.builtin.shell: |
     set -euo pipefail
     forwarder_args=""
@@ -46,6 +46,21 @@
     executable: /bin/bash
   no_log: true
   when: not ipa_primary_default_conf.stat.exists
+
+- name: Open FreeIPA firewall services
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+    - freeipa-ldap
+    - freeipa-ldaps
+    - dns
+    - kerberos
+    - kpasswd
+    - http
+    - https
 
 - name: Ensure IPA services are started
   ansible.builtin.command: ipactl start
