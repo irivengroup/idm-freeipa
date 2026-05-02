@@ -4,17 +4,6 @@
     name: "{{ idm_client_packages }}"
     state: present
 
-# - name: Configure /etc/hosts for IPA servers
-#   ansible.builtin.blockinfile:
-#     path: /etc/hosts
-#     marker: "# {mark} IDM LAB HOSTS"
-#     block: |
-#       {{ idm_primary_ip }} {{ idm_primary_fqdn }} {{ idm_primary_host | default(idm_primary_hostname) }}
-#       {{ idm_replica_ip }} {{ idm_replica_fqdn }} {{ idm_replica_host | default(idm_replica_hostname) }}
-#     owner: root
-#     group: root
-#     mode: "0644"
-
 - name: Build IPA DNS server list from inventory
   ansible.builtin.set_fact:
     idm_client_dns_servers_effective: >-

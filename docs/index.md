@@ -46,3 +46,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 </details>
 
 - [GitHub Actions](github-actions.md)
+
+- [Monitoring baseline](monitoring.md)

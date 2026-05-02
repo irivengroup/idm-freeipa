@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+LOG_DIR="{{ idm_monitoring_log_dir }}"
+LOG_FILE="${LOG_DIR}/idm-monitoring-$(date +%F).log"
+HOST_FQDN="$(hostname -f 2>/dev/null || hostname)"
+mkdir -p "${LOG_DIR}"
+chmod 0750 "${LOG_DIR}"
+exec >> "${LOG_FILE}" 2>&1
+
+status=0
+log() { echo "[$(date --iso-8601=seconds)] [$HOST_FQDN] $*"; }
+warn() { log "WARNING: $*"; }
+fail() { log "ERROR: $*"; status=1; }
+check_command() { command -v "$1" >/dev/null 2>&1; }
+
+log "Starting IDM monitoring baseline checks"
+
+{% if idm_monitoring_enable_disk_check %}
+log "Checking disk usage"
+while read -r usage mountpoint; do
+  percent="${usage%%%}"
+  if [[ "$percent" =~ ^[0-9]+$ ]]; then
+    if (( percent >= {{ idm_monitoring_disk_critical_percent }} )); then
+      fail "Disk critical: ${mountpoint} at ${usage}"
+    elif (( percent >= {{ idm_monitoring_disk_warning_percent }} )); then
+      warn "Disk warning: ${mountpoint} at ${usage}"
+    fi
+  fi
+done < <(df -P -x tmpfs -x devtmpfs | awk 'NR>1 {print $5, $6}')
+{% endif %}
+
+{% if idm_monitoring_enable_chrony_check %}
+if systemctl list-unit-files chronyd.service >/dev/null 2>&1; then
+  log "Checking chronyd"
+  systemctl is-active --quiet chronyd || fail "chronyd is not active"
+  if check_command chronyc; then
+    chronyc tracking || fail "chronyc tracking failed"
+    chronyc sources || warn "chronyc sources failed"
+  fi
+fi
+{% endif %}
+
+{% if idm_monitoring_enable_ipa_healthcheck %}
+if check_command ipactl; then
+  log "Checking FreeIPA services"
+  ipactl status || fail "ipactl status failed"
+  if check_command ipa-healthcheck; then
+    log "Running ipa-healthcheck"
+    ipa-healthcheck --output-type human || warn "ipa-healthcheck returned non-zero status"
+  else
+    warn "ipa-healthcheck not installed"
+  fi
+fi
+{% endif %}
+
+{% if idm_monitoring_enable_replication_check %}
+if check_command ipa-replica-manage; then
+  log "Checking FreeIPA replication agreements"
+  ipa-replica-manage list || warn "ipa-replica-manage list failed"
+fi
+{% endif %}
+
+{% if idm_monitoring_enable_cert_check %}
+if check_command getcert; then
+  log "Checking certmonger tracked certificates"
+  getcert list || warn "getcert list failed"
+fi
+{% endif %}
+
+{% if idm_monitoring_enable_haproxy_check %}
+if systemctl list-unit-files haproxy.service >/dev/null 2>&1; then
+  log "Checking HAProxy"
+  systemctl is-active --quiet haproxy || fail "haproxy is not active"
+  if check_command haproxy && [[ -f /etc/haproxy/haproxy.cfg ]]; then
+    haproxy -c -f /etc/haproxy/haproxy.cfg || fail "haproxy configuration validation failed"
+  fi
+fi
+{% endif %}
+
+if (( status == 0 )); then
+  log "IDM monitoring baseline checks completed successfully"
+else
+  log "IDM monitoring baseline checks completed with errors"
+fi
+exit "$status"
