@@ -1,66 +1,37 @@
-[← Back to index](index.md)
+# Troubleshooting avancé
 
-Breadcrumbs: [Index](index.md) / **Troubleshooting**
+[Retour à l'index](index.md)
 
-# Troubleshooting Guide
-
-<details open>
-<summary><strong>Kerberos password incorrect but password is correct</strong></summary>
-
-Check HAProxy backend strategy and Chrony time sync:
-
+## HAProxy ne démarre pas
 ```bash
-chronyc sources
-timedatectl
-curl http://192.168.1.55:8404/stats
+systemctl status haproxy --no-pager -l
+journalctl -xeu haproxy
+haproxy -c -f /etc/haproxy/haproxy.cfg
 ```
 
-Kerberos should not be random round-robin across KDCs.
+## Enrollment client échoue
+Vérifier :
+- /etc/hosts
+- nmcli DNS
+- keytab
+- host déjà présent
 
-</details>
+## Chrony non synchronisé
+Symptômes :
+- timedatectl => synchronized: no
+- chronyc sources => ^? ou ^x
 
-<details open>
-<summary><strong>Chrony shows ^x or reach 0</strong></summary>
-
-`^x` means source rejected, commonly due to large time offset.
-
+## allow_all désactivé trop tôt
 ```bash
-chronyc tracking
-chronyc sources
+kinit admin
+ipa hbacrule-enable allow_all
 ```
 
-Correct IPA server time first, then restart client Chrony.
-
-</details>
-
-<details open>
-<summary><strong>HAProxy fails with admin.sock error</strong></summary>
-
-Ensure runtime directory exists:
-
+## Sudo rule non appliquée
 ```bash
-mkdir -p /run/haproxy
-chown haproxy:haproxy /run/haproxy
-systemctl restart haproxy
+sss_cache -E
+sudo -l
+ipa sudorule-show <rule>
 ```
 
-The role manages this automatically.
-
-</details>
-
-<details>
-<summary><strong>IPA client already configured</strong></summary>
-
-Validate before reinstalling:
-
-```bash
-klist -k
-sssctl domain-status iriven.lab
-ipa host-show $(hostname -f)
-```
-
-Only uninstall if the join is demonstrably broken.
-
-</details>
-
-[← Back to index](index.md)
+[Retour à l'index](index.md)

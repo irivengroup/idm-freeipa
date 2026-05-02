@@ -1,50 +1,45 @@
-[← Back to index](index.md)
+# Runbook opérationnel détaillé
 
-Breadcrumbs: [Index](index.md) / **Runbook**
+[Retour à l'index](index.md)
 
-# Operational Runbook
+## Pré-déploiement
+- validation inventory Ansible
+- FQDN / hostname cohérents
+- DNS direct + reverse
+- accès SSH + sudo
+- NTP synchronisé
+- SELinux enforcing
+- firewalld actif
 
-## Daily checks
+## Cas multi-appartenance
+### User dans plusieurs groupes
+Exemple : linux-admins + devops-admins + security-auditors
 
+Vérifier :
 ```bash
-ansible-playbook --ask-vault-pass playbooks/90-validate-platform.yml
+id opsuser
+ipa user-show opsuser
+sudo -l -U opsuser
 ```
 
-## Weekly checks
+Règle : éviter plusieurs groupes d'admin total.
 
+### Host dans plusieurs hostgroups
+Exemple : linux-all + jump-hosts
+
+Vérifier :
 ```bash
-ansible-playbook --ask-vault-pass playbooks/60-healthcheck.yml
-ipa-replica-manage list
-ipa topologysegment-find domain
-ipa topologysegment-find ca
+ipa host-show idmadmin.iriven.lab
+ipa hbactest --user=testadmin --host=idmadmin.iriven.lab --service=sshd
 ```
 
-## Password reset
+## Validation post-installation
+- ipactl status
+- replication
+- DNS SRV
+- enrollment client
+- sudo + HBAC
+- breakglass
+- ipa-healthcheck
 
-```bash
-ipa passwd <user>
-ipa user-unlock <user>
-```
-
-## Add Linux admin
-
-```bash
-ipa group-add-member linux-admins --users=<user>
-```
-
-## Remove Linux admin
-
-```bash
-ipa group-remove-member linux-admins --users=<user>
-```
-
-## Load balancer failover test
-
-```bash
-systemctl stop keepalived
-ip addr show
-curl http://192.168.1.55:8404/stats
-systemctl start keepalived
-```
-
-[← Back to index](index.md)
+[Retour à l'index](index.md)
