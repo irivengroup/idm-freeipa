@@ -10,3 +10,6 @@
 - import_playbook: 50-configure-rbac.yml
 - import_playbook: 60-healthcheck.yml
 - import_playbook: 90-validate-platform.yml
+
+# Backup automation can be run independently:
+# ansible-playbook -i inventory/hosts.ini playbooks/70-configure-backup.yml

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+BACKUP_DIR="{{ ipa_backup_dir }}"
+LOG_DIR="{{ ipa_backup_log_dir }}"
+RETENTION_DAYS="{{ ipa_backup_retention_days }}"
+LOG_FILE="${LOG_DIR}/ipa-backup-$(date +%F).log"
+
+mkdir -p "${BACKUP_DIR}" "${LOG_DIR}"
+chmod 0750 "${BACKUP_DIR}" "${LOG_DIR}"
+
+exec >> "${LOG_FILE}" 2>&1
+
+echo "[$(date --iso-8601=seconds)] Starting IRIVEN IPA backup"
+
+if ! command -v ipa-backup >/dev/null 2>&1; then
+  echo "[$(date --iso-8601=seconds)] ERROR: ipa-backup command not found"
+  exit 1
+fi
+
+if ! ipactl status >/dev/null 2>&1; then
+  echo "[$(date --iso-8601=seconds)] ERROR: FreeIPA services are not healthy enough for backup"
+  ipactl status || true
+  exit 1
+fi
+
+BACKUP_ARGS=(--data --logs --online --backup-dir "${BACKUP_DIR}")
+
+{% if not ipa_backup_include_data %}
+BACKUP_ARGS=(--logs --online --backup-dir "${BACKUP_DIR}")
+{% endif %}
+
+ipa-backup "${BACKUP_ARGS[@]}"
+
+echo "[$(date --iso-8601=seconds)] Cleaning backups older than ${RETENTION_DAYS} days"
+find "${BACKUP_DIR}" -mindepth 1 -maxdepth 1 -type d -mtime "+${RETENTION_DAYS}" -print -exec rm -rf {} \;
+find "${LOG_DIR}" -type f -name 'ipa-backup-*.log' -mtime "+${RETENTION_DAYS}" -print -delete
+
+{% if ipa_backup_offsite_enabled %}
+echo "[$(date --iso-8601=seconds)] Running offsite backup command"
+{{ ipa_backup_offsite_command }}
+{% else %}
+echo "[$(date --iso-8601=seconds)] Offsite backup disabled"
+{% endif %}
+
+echo "[$(date --iso-8601=seconds)] IPA backup completed successfully"

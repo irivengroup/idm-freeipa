@@ -1,0 +1,10 @@
+[Unit]
+Description=Run IRIVEN FreeIPA backup on schedule
+
+[Timer]
+OnCalendar={{ ipa_backup_timer_on_calendar }}
+Persistent=true
+Unit=ipa-backup-iriven.service
+
+[Install]
+WantedBy=timers.target

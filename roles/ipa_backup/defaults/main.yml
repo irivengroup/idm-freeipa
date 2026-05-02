@@ -1,0 +1,8 @@
+---
+ipa_backup_dir: /var/backups/ipa
+ipa_backup_log_dir: /var/log/ipa-backup
+ipa_backup_retention_days: 14
+ipa_backup_timer_on_calendar: "*-*-* 02:30:00"
+ipa_backup_include_data: true
+ipa_backup_offsite_enabled: false
+ipa_backup_offsite_command: ""
