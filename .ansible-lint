@@ -1,0 +1,12 @@
+---
+profile: production
+
+exclude_paths:
+  - .github/
+  - docs/
+
+skip_list:
+  - fqcn[action-core]
+  - yaml[line-length]
+  - command-instead-of-shell
+  - no-changed-when
