@@ -45,6 +45,7 @@ idm_lb_packages:
 idm_disable_nodes:
   - idmnode1a
   - idmnode1b
+
 # Client DNS behavior during IPA enrollment.
 # The ipa_client role configures the active NetworkManager connection to use
 # IPA DNS servers derived from the idm_servers inventory group.

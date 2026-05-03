@@ -1,4 +1,6 @@
-# IRIVEN IDM Cluster — FreeIPA / RedHat IdM Lab sur Rocky Linux 10
+# Identity Management (IdM) Infra
+
+IRIVEN IDM Cluster — FreeIPA / RedHat IdM Lab sur Rocky Linux 10
 
 ## 1. Présentation
 

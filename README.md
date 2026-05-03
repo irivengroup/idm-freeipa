@@ -1,4 +1,4 @@
-# IRIVEN IDM Lab — FreeIPA / Red Hat IdM sur Rocky Linux 10
+# IRIVEN IDM Cluster — FreeIPA / RedHat IdM Lab sur Rocky Linux 10
 
 ## 1. Présentation
 
@@ -25,6 +25,8 @@ Il couvre notamment :
 - healthchecks et validations post-déploiement
 
 Documentation complète : [docs/index.md](docs/index.md)
+
+L’objectif est de fournir un socle robuste pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements proches production.
 
 ---
 
@@ -60,18 +62,19 @@ idmloadbalancer.iriven.lab
 
 ## 3. Nomenclature
 
-| Rôle | Hostname | FQDN |
-|---|---|---|
-| Primary IdM | idmprimarya | idmprimarya.iriven.lab |
-| Replica IdM | idmreplicab | idmreplicab.iriven.lab |
+| Rôle            | Hostname         | FQDN                        |
+| --------------- | ---------------- | --------------------------- |
+| Primary IdM     | idmprimarya      | idmprimarya.iriven.lab      |
+| Replica IdM     | idmreplicab      | idmreplicab.iriven.lab      |
 | Load Balancer 1 | idmloadbalancer1 | idmloadbalancer1.iriven.lab |
 | Load Balancer 2 | idmloadbalancer2 | idmloadbalancer2.iriven.lab |
-| VIP Load Balancer | idmloadbalancer | idmloadbalancer.iriven.lab |
-| Client A1 | idmclient1a | idmclient1a.iriven.lab |
-| Client A2 | idmclient2a | idmclient2a.iriven.lab |
-| Client B1 | idmclient1b | idmclient1b.iriven.lab |
-| Client B2 | idmclient2b | idmclient2b.iriven.lab |
-| Admin Host | idmadmin | idmadmin.iriven.lab |
+| VIP Load Balancer          | idmloadbalancer  | idmloadbalancer.iriven.lab  |
+| Client A1       | idmclient1a      | idmclient1a.iriven.lab      |
+| Client A2       | idmclient2a      | idmclient2a.iriven.lab      |
+| Client B1       | idmclient1b      | idmclient1b.iriven.lab      |
+| Client B2       | idmclient2b      | idmclient2b.iriven.lab      |
+| Admin Host      | idmadmin         | idmadmin.iriven.lab         |
+
 
 ---
 
@@ -93,9 +96,46 @@ idm-lab/
 └── README.md
 ```
 
+# IP Addressing Plan
+
+| Host | FQDN | IP | Purpose |
+|---|---|---:|---|
+| idmprimarya | idmprimarya.iriven.lab | 192.168.1.51 | FreeIPA primary |
+| idmreplicab | idmreplicab.iriven.lab | 192.168.1.52 | FreeIPA replica |
+| idmloadbalancer1 | idmloadbalancer1.iriven.lab | 192.168.1.53 | HAProxy/Keepalived node 1 |
+| idmloadbalancer2 | idmloadbalancer2.iriven.lab | 192.168.1.54 | HAProxy/Keepalived node 2 |
+| idmloadbalancer | idmloadbalancer.iriven.lab | 192.168.1.55 | VIP |
+| idmadmin | idmadmin.iriven.lab | 192.168.1.50 | Admin client |
+| idmclient1a | idmclient1a.iriven.lab | 192.168.1.61 | IPA client |
+| idmclient2a | idmclient2a.iriven.lab | 192.168.1.62 | IPA client |
+| idmclient1b | idmclient1b.iriven.lab | 192.168.1.63 | IPA client |
+| idmclient2b | idmclient2b.iriven.lab | 192.168.1.64 | IPA client |
+
+## Network
+
+- Domain: `iriven.lab`
+- Realm: `IRIVEN.LAB`
+- Lab subnet: `192.168.1.0/24`
+- VIP: `192.168.1.55`
+
+## Ports
+
+| Service | Port | Protocol |
+|---|---:|---|
+| HTTP | 80 | TCP |
+| HTTPS | 443 | TCP |
+| LDAP | 389 | TCP |
+| LDAPS | 636 | TCP |
+| Kerberos | 88 | TCP |
+| kpasswd | 464 | TCP |
+| NTP | 123 | UDP |
+| HAProxy stats | 8404 | TCP |
+
 ---
 
 ## 5. Déploiement
+
+Déploiement depuis `idmadmin` :
 
 Déploiement complet :
 
@@ -103,7 +143,7 @@ Déploiement complet :
 ansible-playbook -i inventory/hosts.ini playbooks/site.yml
 ```
 
-Déploiement ciblé :
+Déploiement ciblé (par domaine ):
 
 ```bash
 ansible-playbook -i inventory/hosts.ini playbooks/10-install-primary.yml
@@ -112,14 +152,32 @@ ansible-playbook -i inventory/hosts.ini playbooks/40-configure-loadbalancers.yml
 ansible-playbook -i inventory/hosts.ini playbooks/50-configure-rbac.yml
 ```
 
+### Prise en main Rapide (production)
+
+```bash
+cd /opt/idm-lab
+ansible-galaxy collection install -r requirements.yml
+cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
+ansible-vault encrypt inventory/group_vars/all/vault.yml
+ansible-playbook --ask-vault-pass playbooks/site.yml
+```
+
 ---
 
-## 6. Validation rapide
+## 6. Validation rapide (opérationnelle)
 
 ```bash
 ansible -i inventory/hosts.ini idm_servers -b -m shell -a 'ipactl status'
 ansible -i inventory/hosts.ini idm_servers -b -m shell -a 'ipa-healthcheck --output-type human || true'
 ansible -i inventory/hosts.ini idm_all -b -m shell -a 'chronyc sources || true'
+```
+
+Autres Exemples de vérification :
+
+```bash
+ipa host-find
+ipa dnsrecord-find iriven.lab --name=_ldap._tcp
+systemctl status sssd
 ```
 
 Validation client :
@@ -138,6 +196,14 @@ ipa group-find --sizelimit=0
 ipa hostgroup-find --sizelimit=0
 ipa sudorule-find --sizelimit=0
 ipa hbacrule-find --sizelimit=0
+```
+
+Validation SSH / sudo :
+
+```bash
+ssh testadmin@idmadmin.iriven.lab
+sudo -l
+sudo whoami
 ```
 
 ---
@@ -181,15 +247,50 @@ Ce projet reste un lab avancé. Pour une production réelle, compléter avec :
 
 Ce lab permet de pratiquer une architecture IdM complète :
 
-- FreeIPA Primary / Replica
+- Déploiement FreeIPA Primary / Replica
 - DNS intégré
 - Kerberos
 - LDAP / LDAPS
+- réplication
+- enrollment client
 - SSSD
-- HAProxy
-- Chrony
+- HAProxy + failover
+- chrony / NTP maîtrisé
 - sudo IPA
 - HBAC
 - RBAC production-grade
 - validation de résilience
 - exploitation automatisée avec Ansible
+
+L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.
+
+---
+
+
+## 10. Commandes utiles
+
+Exécution ciblée :
+
+```bash
+ansible -i inventory/hosts.ini idm_servers -m ping
+```
+
+Validation HAProxy :
+
+```bash
+systemctl status haproxy
+haproxy -c -f /etc/haproxy/haproxy.cfg
+```
+
+Validation chrony :
+
+```bash
+chronyc tracking
+chronyc sources
+```
+
+---
+
+## Authors
+
+* **Alfred TCHONDJO** - *Project Initiator* - [Iriven Group](https://www.facebook.com/Tchalf)
