@@ -54,3 +54,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Client enrollment and DNS management](client-enrollment.md)
 
 - [Common hosts baseline](common-hosts.md)
+
+- [SSH hardening](ssh-hardening.md)

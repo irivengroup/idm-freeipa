@@ -1,0 +1,32 @@
+---
+- name: Ensure OpenSSH server is installed
+  ansible.builtin.dnf:
+    name: openssh-server
+    state: present
+
+- name: Ensure sshd is enabled and running
+  ansible.builtin.systemd:
+    name: sshd
+    enabled: true
+    state: started
+
+- name: Configure SSH hardening baseline
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED SSH HARDENING"
+    block: |
+      PermitRootLogin {{ ssh_hardening_permit_root_login }}
+      PasswordAuthentication {{ ssh_hardening_password_authentication }}
+      PubkeyAuthentication {{ ssh_hardening_pubkey_authentication }}
+      GSSAPIAuthentication {{ ssh_hardening_gssapi_authentication }}
+      UsePAM {{ ssh_hardening_use_pam }}
+      X11Forwarding {{ ssh_hardening_x11_forwarding }}
+      AllowGroups {{ ssh_hardening_allow_groups | join(' ') }}
+  notify: Restart sshd
+
+- name: Validate sshd configuration
+  ansible.builtin.command: sshd -t
+  changed_when: false
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

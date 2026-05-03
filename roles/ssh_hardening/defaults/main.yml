@@ -1,0 +1,13 @@
+---
+ssh_hardening_permit_root_login: "no"
+ssh_hardening_password_authentication: "yes"
+ssh_hardening_pubkey_authentication: "yes"
+ssh_hardening_gssapi_authentication: "yes"
+ssh_hardening_use_pam: "yes"
+ssh_hardening_x11_forwarding: "no"
+ssh_hardening_allow_groups:
+  - linux-admins
+  - devops-admins
+  - security-auditors
+  - idm-admins
+  - breakglass-admins
