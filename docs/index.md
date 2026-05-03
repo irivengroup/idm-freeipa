@@ -52,3 +52,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [CI / Linting](ci-linting.md)
 
 - [Client enrollment and DNS management](client-enrollment.md)
+
+- [Common hosts baseline](common-hosts.md)
