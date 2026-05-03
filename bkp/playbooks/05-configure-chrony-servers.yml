@@ -1,6 +1,0 @@
----
-- name: Configure Chrony on IPA servers
-  hosts: idm_servers
-  become: true
-  roles:
-    - chrony_server

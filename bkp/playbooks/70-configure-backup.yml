@@ -1,8 +1,0 @@
----
-- name: Configure FreeIPA backup automation
-  hosts: idm_primary
-  become: true
-  gather_facts: false
-
-  roles:
-    - ipa_backup

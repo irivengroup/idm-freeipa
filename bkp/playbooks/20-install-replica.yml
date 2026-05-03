@@ -1,8 +1,0 @@
----
-- name: Install FreeIPA replica
-  hosts: idm_replica
-  become: true
-  roles:
-    - common_hosts
-    - chrony_server
-    - ipa_replica

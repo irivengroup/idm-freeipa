@@ -1,6 +1,0 @@
----
-- name: Bootstrap common host configuration
-  hosts: idm_all
-  become: true
-  roles:
-    - common_hosts

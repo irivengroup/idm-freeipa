@@ -1,6 +1,0 @@
----
-- name: Run FreeIPA healthcheck
-  hosts: idm_servers
-  become: true
-  roles:
-    - ipa_healthcheck

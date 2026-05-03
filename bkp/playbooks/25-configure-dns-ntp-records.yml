@@ -1,6 +1,0 @@
----
-- name: Configure IPA DNS SRV records for LDAP, Kerberos, and NTP
-  hosts: idm_primary
-  become: true
-  roles:
-    - ipa_dns_ntp

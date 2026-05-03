@@ -1,3 +1,0 @@
----
-# The active NetworkManager connection is detected automatically from the
-# default IPv4 route. DNS servers are derived from inventory group idm_servers.

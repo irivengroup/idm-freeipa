@@ -1,6 +1,0 @@
----
-# Copy to vault.yml and encrypt with:
-# ansible-vault encrypt inventory/group_vars/vault.yml
-idm_admin_principal: admin
-idm_admin_password: CHANGE_ME_WITH_ANSIBLE_VAULT
-idm_dm_password: CHANGE_ME_WITH_ANSIBLE_VAULT

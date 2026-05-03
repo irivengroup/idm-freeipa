@@ -1,0 +1,7 @@
+---
+- name: Configure centralized log forwarding
+  hosts: idm_all
+  become: true
+
+  roles:
+    - role: log_collector
