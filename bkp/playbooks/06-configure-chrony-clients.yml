@@ -1,0 +1,6 @@
+---
+- name: Configure Chrony on IDM clients and admin workstation
+  hosts: idm_clients:idm_admin:idm_loadbalancers
+  become: true
+  roles:
+    - chrony_client

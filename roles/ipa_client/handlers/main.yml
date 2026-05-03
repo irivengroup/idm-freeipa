@@ -1,0 +1,14 @@
+---
+- name: Restart SSSD
+  ansible.builtin.systemd:
+    name: sssd
+    state: restarted
+  failed_when: false
+
+- name: Bring NetworkManager connection up
+  ansible.builtin.command: "nmcli con up {{ ipa_client_nm_connection_name }}"
+  changed_when: true
+  when:
+    - ipa_client_manage_nm_dns | bool
+    - ipa_client_nm_connection_name is defined
+    - ipa_client_nm_connection_name | length > 0

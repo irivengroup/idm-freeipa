@@ -1,0 +1,59 @@
+---
+- name: Ensure IPA backup directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ ipa_backup_dir }}"
+    - "{{ ipa_backup_log_dir }}"
+
+- name: Deploy IPA backup script
+  ansible.builtin.template:
+    src: ipa-backup-iriven.sh.j2
+    dest: /usr/local/sbin/ipa-backup-iriven.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy IPA backup systemd service
+  ansible.builtin.template:
+    src: ipa-backup-iriven.service.j2
+    dest: /etc/systemd/system/ipa-backup-iriven.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy IPA backup systemd timer
+  ansible.builtin.template:
+    src: ipa-backup-iriven.timer.j2
+    dest: /etc/systemd/system/ipa-backup-iriven.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers before enabling timer
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start IPA backup timer
+  ansible.builtin.systemd:
+    name: ipa-backup-iriven.timer
+    enabled: true
+    state: started
+
+- name: Validate IPA backup script syntax
+  ansible.builtin.command: bash -n /usr/local/sbin/ipa-backup-iriven.sh
+  changed_when: false
+
+- name: Show IPA backup timer status
+  ansible.builtin.command: systemctl list-timers ipa-backup-iriven.timer --no-pager
+  changed_when: false
+  register: ipa_backup_timer_status
+
+- name: Display IPA backup timer status
+  ansible.builtin.debug:
+    var: ipa_backup_timer_status.stdout_lines

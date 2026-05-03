@@ -1,3 +1,20 @@
 ---
-# The active NetworkManager connection is detected automatically from the
-# default IPv4 route. DNS servers are derived from inventory group idm_servers.
+ipa_client_domain: "{{ idm_domain | default('iriven.lab') }}"
+ipa_client_realm: "{{ idm_realm | default('IRIVEN.LAB') }}"
+ipa_client_server: "{{ idm_loadbalancer_fqdn | default('idmloadbalancer.iriven.lab') }}"
+ipa_client_admin_principal: "{{ idm_admin_principal | default('admin') }}"
+ipa_client_admin_password: "{{ idm_admin_password | default(omit) }}"
+ipa_client_mkhomedir: true
+ipa_client_force_join: true
+ipa_client_no_ntp: false
+ipa_client_manage_dns_records: true
+ipa_client_manage_hosts_file: true
+ipa_client_manage_nm_dns: true
+ipa_client_validate_after_enrollment: true
+ipa_client_dns_zone: "{{ ipa_client_domain }}"
+ipa_client_primary_host: "{{ idm_primary_host | default('idmprimarya') }}"
+ipa_client_primary_fqdn: "{{ idm_primary_fqdn | default('idmprimarya.' ~ ipa_client_domain) }}"
+ipa_client_primary_ip: "{{ idm_primary_ip | default(hostvars[groups['idm_primary'][0]].ansible_host) }}"
+ipa_client_replica_host: "{{ idm_replica_host | default('idmreplicab') }}"
+ipa_client_replica_fqdn: "{{ idm_replica_fqdn | default('idmreplicab.' ~ ipa_client_domain) }}"
+ipa_client_replica_ip: "{{ idm_replica_ip | default(hostvars[groups['idm_replica'][0]].ansible_host) }}"

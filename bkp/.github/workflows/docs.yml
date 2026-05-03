@@ -1,0 +1,54 @@
+---
+name: Documentation
+
+"on":
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    name: Check documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check mandatory documentation files
+        run: |
+          test -f docs/index.md
+          test -f docs/architecture.md
+          test -f docs/addressing.md
+          test -f docs/runbook.md
+          test -f docs/troubleshooting.md
+          test -f docs/rbac.md
+          test -f README.md
+
+      - name: Check return links to index
+        run: |
+          missing=0
+          for file in docs/*.md; do
+            if [ "$(basename "$file")" = "index.md" ]; then
+              continue
+            fi
+            if ! grep -q "index.md" "$file"; then
+              echo "::error file=$file::Missing link back to docs/index.md"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Check README documentation link
+        run: grep -q "docs/index.md" README.md

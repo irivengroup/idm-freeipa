@@ -1,0 +1,42 @@
+---
+name: Security checks
+
+"on":
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secret scanning baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check that vault file is not committed
+        run: |
+          vault_file="inventory/group_vars/all/vault.yml"
+          if [ -f "$vault_file" ]; then
+            echo "::error::${vault_file} must not be committed. Use vault.yml.example instead."
+            exit 1
+          fi
+
+      - name: Detect obvious plaintext secrets
+        run: |
+          set +e
+          secret_regex="(password|passwd|secret|token|apikey|api_key)"
+          grep -RInE "${secret_regex}[[:space:]]*[:=][[:space:]]*['\"]?[^'\" ]+" . \
+            --exclude-dir=.git \
+            --exclude="vault.yml.example" \
+            --exclude="*.md"
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "::warning::Potential plaintext secret found. Review output carefully."
+          fi
+          exit 0

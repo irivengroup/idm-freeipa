@@ -1,0 +1,96 @@
+global
+    log /dev/log local0
+    chroot /var/lib/haproxy
+    maxconn 4096
+    user haproxy
+    group haproxy
+    daemon
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+
+defaults
+    mode tcp
+    log global
+    option dontlognull
+    timeout connect 10s
+    timeout client 1m
+    timeout server 1m
+    retries 3
+
+frontend stats
+    bind *:{{ idm_lb_stats_port }}
+    mode http
+    stats enable
+    stats uri /stats
+    stats refresh 10s
+
+frontend idm_http
+    bind *:80
+    mode tcp
+    default_backend ipa_http
+
+backend ipa_http
+    mode tcp
+    balance source
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:80 check
+    server replica {{ idm_replica_fqdn }}:80 check backup
+
+frontend idm_https
+    bind *:443
+    mode tcp
+    default_backend ipa_https
+
+backend ipa_https
+    mode tcp
+    balance source
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:443 check
+    server replica {{ idm_replica_fqdn }}:443 check backup
+
+frontend idm_ldap
+    bind *:389
+    mode tcp
+    default_backend ipa_ldap
+
+backend ipa_ldap
+    mode tcp
+    balance source
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:389 check
+    server replica {{ idm_replica_fqdn }}:389 check backup
+
+frontend idm_ldaps
+    bind *:636
+    mode tcp
+    default_backend ipa_ldaps
+
+backend ipa_ldaps
+    mode tcp
+    balance source
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:636 check
+    server replica {{ idm_replica_fqdn }}:636 check backup
+
+frontend idm_kerberos_tcp
+    bind *:88
+    mode tcp
+    default_backend ipa_kerberos_tcp
+
+backend ipa_kerberos_tcp
+    mode tcp
+    balance first
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:88 check
+    server replica {{ idm_replica_fqdn }}:88 check backup
+
+frontend idm_kpasswd_tcp
+    bind *:464
+    mode tcp
+    default_backend ipa_kpasswd_tcp
+
+backend ipa_kpasswd_tcp
+    mode tcp
+    balance first
+    option tcp-check
+    server primary {{ idm_primary_fqdn }}:464 check
+    server replica {{ idm_replica_fqdn }}:464 check backup

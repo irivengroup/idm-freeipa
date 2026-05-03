@@ -1,0 +1,25 @@
+---
+# Disable only after hbactest and at least one breakglass user validation.
+idm_rbac_disable_allow_all: false
+idm_rbac_hbac_service: sshd
+
+# Sudo command catalogs for limited roles.
+idm_rbac_security_readonly_commands:
+  - /usr/bin/journalctl
+  - /usr/bin/systemctl
+  - /usr/bin/cat
+  - /usr/bin/less
+  - /usr/bin/tail
+  - /usr/bin/grep
+
+idm_rbac_devops_commands:
+  - /usr/bin/systemctl
+  - /usr/bin/journalctl
+  - /usr/bin/tail
+  - /usr/bin/less
+
+idm_rbac_db_commands:
+  - /usr/bin/systemctl
+  - /usr/bin/journalctl
+  - /usr/bin/tail
+  - /usr/bin/less

@@ -48,7 +48,3 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [GitHub Actions](github-actions.md)
 
 - [Monitoring baseline](monitoring.md)
-
-- [CI / Linting](ci-linting.md)
-
-- [Client enrollment and DNS management](client-enrollment.md)

@@ -1,102 +1,207 @@
 ---
-- name: Install FreeIPA client packages
-  ansible.builtin.package:
-    name: "{{ idm_client_packages }}"
-    state: present
-
-- name: Build IPA DNS server list from inventory
+- name: Build IPA client facts
   ansible.builtin.set_fact:
-    idm_client_dns_servers_effective: >-
+    ipa_client_fqdn: "{{ ansible_fqdn | default(inventory_hostname ~ '.' ~ ipa_client_domain) }}"
+    ipa_client_shortname: "{{ inventory_hostname }}"
+    ipa_client_ip: "{{ ansible_host | default(ansible_default_ipv4.address | default('')) }}"
+    ipa_client_dns_servers_effective:
+      - "{{ ipa_client_primary_ip }}"
+      - "{{ ipa_client_replica_ip }}"
+
+- name: Validate client IP fact
+  ansible.builtin.assert:
+    that:
+      - ipa_client_ip | length > 0
+    fail_msg: "Unable to determine client IP for {{ inventory_hostname }}. Define ansible_host in inventory/hosts.ini."
+
+- name: Configure hosts file for IPA servers
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} IDM LAB HOSTS"
+    block: |
+      {{ ipa_client_primary_ip }} {{ ipa_client_primary_fqdn }} {{ ipa_client_primary_host }}
+      {{ ipa_client_replica_ip }} {{ ipa_client_replica_fqdn }} {{ ipa_client_replica_host }}
+  when: ipa_client_manage_hosts_file | bool
+
+- name: Detect default IPv4 route
+  ansible.builtin.command: ip route show default
+  register: ipa_client_default_route
+  changed_when: false
+  when: ipa_client_manage_nm_dns | bool
+
+- name: Extract default IPv4 interface
+  ansible.builtin.set_fact:
+    ipa_client_default_iface: "{{ ipa_client_default_route.stdout | regex_search('dev\\s+(\\S+)', '\\1') | first }}"
+  when:
+    - ipa_client_manage_nm_dns | bool
+    - ipa_client_default_route.stdout is search('dev\\s+')
+
+- name: Detect active NetworkManager connections
+  ansible.builtin.command: nmcli -t -f NAME,DEVICE con show --active
+  register: ipa_client_nm_connections
+  changed_when: false
+  when: ipa_client_manage_nm_dns | bool
+
+- name: Set NetworkManager connection name
+  ansible.builtin.set_fact:
+    ipa_client_nm_connection_name: >-
       {{
-        groups.get('idm_servers', [])
-        | map('extract', hostvars, 'ansible_host')
-        | select('defined')
-        | list
-        | unique
+        (
+          ipa_client_nm_connections.stdout_lines
+          | select('search', ':' ~ ipa_client_default_iface ~ '$')
+          | list
+          | first
+          | default('')
+        ).split(':')[0]
       }}
+  when:
+    - ipa_client_manage_nm_dns | bool
+    - ipa_client_default_iface is defined
 
-- name: Fallback to static IPA DNS server list when inventory extraction is empty
-  ansible.builtin.set_fact:
-    idm_client_dns_servers_effective:
-      - "{{ idm_primary_ip }}"
-      - "{{ idm_replica_ip }}"
-  when: idm_client_dns_servers_effective | length == 0
-
-- name: Detect default IPv4 interface
-  ansible.builtin.shell: |
-    set -o pipefail
-    ip -o -4 route show to default | awk '{print $5; exit}'
-  args:
-    executable: /bin/bash
-  register: idm_client_default_iface
-  changed_when: false
-
-- name: Detect active NetworkManager connection for default interface
-  ansible.builtin.shell: |
-    set -o pipefail
-    nmcli -t -f NAME,DEVICE con show --active | awk -F: -v dev="{{ idm_client_default_iface.stdout }}" '$2 == dev {print $1; exit}'
-  args:
-    executable: /bin/bash
-  register: idm_client_nm_connection
-  changed_when: false
-
-- name: Fail when no active NetworkManager connection is detected
-  ansible.builtin.fail:
-    msg: >-
-      Unable to detect the active NetworkManager connection for interface
-      {{ idm_client_default_iface.stdout | default('UNKNOWN') }}.
-      Ensure NetworkManager manages the client network interface.
-  when: idm_client_nm_connection.stdout | length == 0
-
-- name: Set NetworkManager connection and desired DNS facts
-  ansible.builtin.set_fact:
-    cnx_name: "{{ idm_client_nm_connection.stdout }}"
-    idm_client_dns_servers_nm: "{{ idm_client_dns_servers_effective | join(' ') }}"
+- name: Validate NetworkManager connection detection
+  ansible.builtin.assert:
+    that:
+      - ipa_client_nm_connection_name is defined
+      - ipa_client_nm_connection_name | length > 0
+    fail_msg: "Unable to detect active NetworkManager connection for {{ inventory_hostname }}."
+  when: ipa_client_manage_nm_dns | bool
 
 - name: Read current NetworkManager DNS configuration
-  ansible.builtin.command: >
-    nmcli -g ipv4.dns,ipv4.ignore-auto-dns con show {{ cnx_name }}
-  register: idm_client_current_nm_dns
+  ansible.builtin.command: "nmcli -g ipv4.dns,ipv4.ignore-auto-dns con show {{ ipa_client_nm_connection_name }}"
+  register: ipa_client_current_nm_dns
   changed_when: false
+  when: ipa_client_manage_nm_dns | bool
 
 - name: Configure DNS to use IPA servers
   ansible.builtin.command: >
-    nmcli con mod {{ cnx_name }}
-    ipv4.dns "{{ idm_client_dns_servers_nm }}"
+    nmcli con mod {{ ipa_client_nm_connection_name }}
+    ipv4.dns "{{ ipa_client_dns_servers_effective | join(' ') }}"
     ipv4.ignore-auto-dns yes
-  register: idm_client_nm_dns_update
+  register: ipa_client_nm_dns_update
   changed_when: true
-  when: >-
-    idm_client_dns_servers_effective | join(',') not in idm_client_current_nm_dns.stdout
-    or 'yes' not in idm_client_current_nm_dns.stdout
+  notify: Bring NetworkManager connection up
+  when:
+    - ipa_client_manage_nm_dns | bool
+    - ipa_client_current_nm_dns.stdout is not search(ipa_client_primary_ip)
+      or ipa_client_current_nm_dns.stdout is not search(ipa_client_replica_ip)
+      or ipa_client_current_nm_dns.stdout is not search('yes')
 
-- name: Bring connection up
-  ansible.builtin.command: nmcli con up {{ cnx_name }}
-  changed_when: true
-  when: idm_client_nm_dns_update is changed
+- name: Flush DNS connection handler before enrollment
+  ansible.builtin.meta: flush_handlers
 
-- name: Check whether IPA client is already configured
+- name: Check if IPA client is already configured
   ansible.builtin.stat:
     path: /etc/ipa/default.conf
   register: ipa_client_default_conf
 
-- name: Enroll client into FreeIPA
-  ansible.builtin.command:
-    argv:
-      - ipa-client-install
-      - -U
-      - --domain={{ idm_domain }}
-      - --realm={{ idm_realm }}
-      - --server={{ idm_lb_vip_fqdn }}
-      - --mkhomedir
-      - --force-join
-      - --principal={{ idm_admin_principal }}
-      - --password={{ idm_admin_password }}
+- name: Check existing host keytab
+  ansible.builtin.command: klist -k /etc/krb5.keytab
+  register: ipa_client_keytab_check
+  changed_when: false
+  failed_when: false
+
+- name: Manage IPA host and DNS record from IPA primary
+  delegate_to: "{{ groups['idm_primary'][0] }}"
+  become: true
+  block:
+    - name: Obtain IPA admin Kerberos ticket for host and DNS management
+      ansible.builtin.shell: |
+        set -euo pipefail
+        kdestroy >/dev/null 2>&1 || true
+        printf '%s\n' '{{ ipa_client_admin_password }}' | kinit {{ ipa_client_admin_principal }}
+      changed_when: false
+      no_log: true
+      when: ipa_client_admin_password is defined
+
+    - name: Check IPA host object
+      ansible.builtin.command: "ipa host-show {{ ipa_client_fqdn }}"
+      register: ipa_client_host_show
+      changed_when: false
+      failed_when: false
+
+    - name: Ensure IPA host object exists
+      ansible.builtin.command: >
+        ipa host-add {{ ipa_client_fqdn }}
+        --ip-address={{ ipa_client_ip }}
+        --force
+      register: ipa_client_host_add
+      changed_when: ipa_client_host_add.rc == 0
+      when: ipa_client_host_show.rc != 0
+
+    - name: Check IPA DNS A record
+      ansible.builtin.command: "ipa dnsrecord-show {{ ipa_client_dns_zone }} {{ ipa_client_shortname }}"
+      register: ipa_client_dns_record_show
+      changed_when: false
+      failed_when: false
+      when: ipa_client_manage_dns_records | bool
+
+    - name: Remove stale IPA DNS A records
+      ansible.builtin.shell: |
+        set -euo pipefail
+        current_records="$(ipa dnsrecord-show {{ ipa_client_dns_zone }} {{ ipa_client_shortname }} 2>/dev/null \
+          | awk -F': ' '/A record:/ {print $2}' | tr ',' '\n' | xargs -r -n1 echo)"
+        for ip in ${current_records}; do
+          if [ "${ip}" != "{{ ipa_client_ip }}" ]; then
+            ipa dnsrecord-del {{ ipa_client_dns_zone }} {{ ipa_client_shortname }} --a-rec="${ip}" >/dev/null
+            echo changed
+          fi
+        done
+      register: ipa_client_dns_stale_cleanup
+      changed_when: "'changed' in ipa_client_dns_stale_cleanup.stdout"
+      when:
+        - ipa_client_manage_dns_records | bool
+        - ipa_client_dns_record_show.rc == 0
+
+    - name: Ensure IPA DNS A record exists with expected IP
+      ansible.builtin.shell: |
+        set -euo pipefail
+        if ipa dnsrecord-show {{ ipa_client_dns_zone }} {{ ipa_client_shortname }} 2>/dev/null | grep -q "{{ ipa_client_ip }}"; then
+          exit 0
+        fi
+        ipa dnsrecord-add {{ ipa_client_dns_zone }} {{ ipa_client_shortname }} --a-rec={{ ipa_client_ip }} >/dev/null
+        echo changed
+      register: ipa_client_dns_record_add
+      changed_when: "'changed' in ipa_client_dns_record_add.stdout"
+      when: ipa_client_manage_dns_records | bool
+
+- name: Install IPA client if not already enrolled
+  ansible.builtin.command: >
+    ipa-client-install
+    -U
+    --domain={{ ipa_client_domain }}
+    --realm={{ ipa_client_realm }}
+    --server={{ ipa_client_server }}
+    --principal={{ ipa_client_admin_principal }}
+    --password={{ ipa_client_admin_password }}
+    {% if ipa_client_mkhomedir | bool %}--mkhomedir{% endif %}
+    {% if ipa_client_force_join | bool %}--force-join{% endif %}
+    {% if ipa_client_no_ntp | bool %}--no-ntp{% endif %}
   no_log: true
-  when: not ipa_client_default_conf.stat.exists
+  register: ipa_client_install_result
+  changed_when: ipa_client_install_result.rc == 0
+  when:
+    - not ipa_client_default_conf.stat.exists or ipa_client_keytab_check.rc != 0
 
 - name: Ensure SSSD is enabled and running
   ansible.builtin.systemd:
     name: sssd
     enabled: true
     state: started
+  failed_when: false
+
+- name: Validate IPA client keytab
+  ansible.builtin.command: klist -k /etc/krb5.keytab
+  changed_when: false
+  when: ipa_client_validate_after_enrollment | bool
+
+- name: Validate IPA domain status through SSSD
+  ansible.builtin.command: "sssctl domain-status {{ ipa_client_domain }}"
+  changed_when: false
+  failed_when: false
+  register: ipa_client_sssctl_status
+  when: ipa_client_validate_after_enrollment | bool
+
+- name: Validate DNS resolution for client FQDN
+  ansible.builtin.command: "getent hosts {{ ipa_client_fqdn }}"
+  changed_when: false
+  when: ipa_client_validate_after_enrollment | bool

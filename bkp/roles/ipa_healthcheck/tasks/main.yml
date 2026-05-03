@@ -1,0 +1,27 @@
+---
+- name: Install IPA healthcheck package
+  ansible.builtin.package:
+    name: ipa-healthcheck
+    state: present
+
+- name: Correct PKI CA CS.cfg permissions
+  ansible.builtin.file:
+    path: /var/lib/pki/pki-tomcat/conf/ca/CS.cfg
+    owner: pkiuser
+    group: pkiuser
+    mode: '0660'
+  when: inventory_hostname in groups['idm_primary']
+
+- name: Run IPA healthcheck
+  ansible.builtin.shell: |
+    kinit -k
+    ipa-healthcheck --output-type human
+  args:
+    executable: /bin/bash
+  register: ipa_healthcheck_result
+  changed_when: false
+  failed_when: ipa_healthcheck_result.rc not in [0, 1]
+
+- name: Display IPA healthcheck output
+  ansible.builtin.debug:
+    var: ipa_healthcheck_result.stdout_lines

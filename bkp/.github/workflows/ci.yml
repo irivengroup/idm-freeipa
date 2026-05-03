@@ -1,0 +1,57 @@
+---
+name: CI
+
+"on":
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Ansible project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint yamllint
+
+      - name: Validate repository structure
+        run: |
+          test -f ansible.cfg
+          test -f inventory/hosts.ini
+          test -d inventory/group_vars/all
+          test -d playbooks
+          test -d roles
+          test -d docs
+          test -f docs/index.md
+          test -f README.md
+
+      - name: YAML lint
+        run: yamllint .
+
+      - name: Ansible lint
+        run: ansible-lint
+
+      - name: Ansible inventory validation
+        run: ansible-inventory -i inventory/hosts.ini --list
+
+      - name: Playbook syntax checks
+        run: |
+          for playbook in playbooks/*.yml; do
+            echo "Checking ${playbook}"
+            ansible-playbook -i inventory/hosts.ini --syntax-check "${playbook}"
+          done
