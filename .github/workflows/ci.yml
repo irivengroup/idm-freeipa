@@ -29,12 +29,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible ansible-lint yamllint
 
-      - name: Show tool versions
-        run: |
-          ansible --version
-          ansible-lint --version
-          yamllint --version
-
       - name: Validate repository structure
         run: |
           test -f ansible.cfg

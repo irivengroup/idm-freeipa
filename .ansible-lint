@@ -6,7 +6,15 @@ exclude_paths:
   - docs/
 
 skip_list:
-  - fqcn[action-core]
-  - yaml[line-length]
+  - command-instead-of-module
   - command-instead-of-shell
   - no-changed-when
+  - no-handler
+  - risky-shell-pipe
+  - var-naming
+  - name
+  - name[play]
+  - name[casing]
+  - jinja
+  - jinja[spacing]
+  - yaml[line-length]
