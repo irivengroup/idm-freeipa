@@ -1,0 +1,63 @@
+# Managed by Ansible - IRIVEN IDM Lab
+
+/var/log/remote/*/*.log {
+    daily
+    rotate {{ log_rotation_remote_logs_retention }}
+{% if log_rotation_compress | bool %}
+    compress
+{% endif %}
+{% if log_rotation_delaycompress | bool %}
+    delaycompress
+{% endif %}
+{% if log_rotation_missingok | bool %}
+    missingok
+{% endif %}
+{% if log_rotation_notifempty | bool %}
+    notifempty
+{% endif %}
+    create 0640 root root
+    sharedscripts
+}
+
+/var/log/sudo.log {
+    daily
+    rotate {{ log_rotation_local_logs_retention }}
+{% if log_rotation_compress | bool %}
+    compress
+{% endif %}
+{% if log_rotation_delaycompress | bool %}
+    delaycompress
+{% endif %}
+    missingok
+    notifempty
+    create 0600 root root
+}
+
+/var/log/idm-monitoring/*.log
+/var/log/idm-pki-baseline/*.log {
+    daily
+    rotate {{ log_rotation_local_logs_retention }}
+{% if log_rotation_compress | bool %}
+    compress
+{% endif %}
+{% if log_rotation_delaycompress | bool %}
+    delaycompress
+{% endif %}
+    missingok
+    notifempty
+    create 0640 root root
+}
+
+/var/log/ipa-backup/*.log {
+    daily
+    rotate {{ log_rotation_backup_logs_retention }}
+{% if log_rotation_compress | bool %}
+    compress
+{% endif %}
+{% if log_rotation_delaycompress | bool %}
+    delaycompress
+{% endif %}
+    missingok
+    notifempty
+    create 0640 root root
+}

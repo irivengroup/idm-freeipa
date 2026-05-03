@@ -1,0 +1,17 @@
+---
+- name: Ensure logrotate is installed
+  ansible.builtin.dnf:
+    name: logrotate
+    state: present
+
+- name: Deploy IDM logrotate policy
+  ansible.builtin.template:
+    src: idm-lab-logrotate.j2
+    dest: /etc/logrotate.d/idm-lab
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Validate logrotate configuration
+  ansible.builtin.command: logrotate -d /etc/logrotate.d/idm-lab
+  changed_when: false

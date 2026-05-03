@@ -1,0 +1,8 @@
+---
+- name: Configure IDM log rotation
+  hosts: idm_all
+  become: true
+  gather_facts: false
+
+  roles:
+    - log_rotation

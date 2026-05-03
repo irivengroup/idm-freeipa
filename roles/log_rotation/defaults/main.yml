@@ -1,0 +1,8 @@
+---
+log_rotation_remote_logs_retention: 30
+log_rotation_local_logs_retention: 14
+log_rotation_backup_logs_retention: 30
+log_rotation_compress: true
+log_rotation_delaycompress: true
+log_rotation_missingok: true
+log_rotation_notifempty: true

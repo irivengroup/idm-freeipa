@@ -64,3 +64,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [PKI baseline](pki-baseline.md)
 
 - [Log forwarding](log-forwarding.md)
+
+- [Log rotation](log-rotation.md)
