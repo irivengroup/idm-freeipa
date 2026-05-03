@@ -1,6 +1,6 @@
 # Linux Identity Management (IDM) Infra
 
-An ansible IDM Cluster deployment tool based on FreeIPA / RedHat IdM Lab sur Rocky Linux 10
+Un outil Ansible permettant de déployer et d’administrer une infrastructure IDM basée sur FreeIPA / RedHat Identity Management (IdM) sous Rocky Linux 10.
 
 ## 1. Présentation
 
