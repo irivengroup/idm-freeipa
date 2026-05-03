@@ -1,0 +1,14 @@
+# Managed by Ansible - IRIVEN IDM Lab
+# Local audit-oriented log routing.
+
+authpriv.*    /var/log/secure
+*.info;mail.none;authpriv.none;cron.none    /var/log/messages
+
+{% if audit_baseline_rsyslog_forwarding_enabled | bool %}
+# Remote forwarding placeholder.
+{% if audit_baseline_rsyslog_remote_protocol == 'tcp' %}
+*.* @@{{ audit_baseline_rsyslog_remote_host }}:{{ audit_baseline_rsyslog_remote_port }}
+{% else %}
+*.* @{{ audit_baseline_rsyslog_remote_host }}:{{ audit_baseline_rsyslog_remote_port }}
+{% endif %}
+{% endif %}

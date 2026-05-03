@@ -1,0 +1,14 @@
+# Managed by Ansible - IRIVEN IDM Lab
+Defaults logfile="{{ audit_baseline_sudo_logfile }}"
+Defaults iolog_dir="{{ audit_baseline_sudo_iolog_dir }}"
+{% if audit_baseline_sudo_use_pty | bool %}
+Defaults use_pty
+{% endif %}
+{% if audit_baseline_sudo_log_input | bool %}
+Defaults log_input
+{% endif %}
+{% if audit_baseline_sudo_log_output | bool %}
+Defaults log_output
+{% endif %}
+Defaults loglinelen=0
+Defaults log_year

@@ -1,0 +1,96 @@
+---
+- name: Install audit baseline packages
+  ansible.builtin.dnf:
+    name:
+      - rsyslog
+      - audit
+      - sudo
+    state: present
+
+- name: Ensure persistent journal directory exists
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: "2755"
+
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: "{{ audit_baseline_journald_conf_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure journald audit baseline
+  ansible.builtin.template:
+    src: 99-idm-audit-journald.conf.j2
+    dest: "{{ audit_baseline_journald_conf_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-journald
+
+- name: Ensure sudo I/O log directory exists
+  ansible.builtin.file:
+    path: "{{ audit_baseline_sudo_iolog_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configure sudo audit baseline
+  ansible.builtin.template:
+    src: 99-idm-audit-sudoers.j2
+    dest: "{{ audit_baseline_sudoers_file }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Configure rsyslog audit baseline
+  ansible.builtin.template:
+    src: 99-idm-audit-rsyslog.conf.j2
+    dest: "{{ audit_baseline_rsyslog_conf_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Enable and start rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    enabled: true
+    state: started
+  failed_when: false
+
+- name: Enable and start auditd
+  ansible.builtin.systemd:
+    name: auditd
+    enabled: true
+    state: started
+  failed_when: false
+  when: audit_baseline_auditd_enabled | bool
+
+- name: Configure auditd baseline rules
+  ansible.builtin.template:
+    src: 99-idm-audit.rules.j2
+    dest: "{{ audit_baseline_auditd_rules_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload audit rules
+  when: audit_baseline_auditd_enabled | bool
+
+- name: Flush audit baseline handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Validate journald persistent mode
+  ansible.builtin.command: journalctl --disk-usage
+  changed_when: false
+  register: audit_baseline_journal_disk_usage
+
+- name: Display journald disk usage
+  ansible.builtin.debug:
+    var: audit_baseline_journal_disk_usage.stdout_lines

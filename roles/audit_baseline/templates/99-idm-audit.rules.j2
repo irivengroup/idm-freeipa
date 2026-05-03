@@ -1,0 +1,11 @@
+# Managed by Ansible - IRIVEN IDM Lab
+-w /etc/sudoers -p wa -k sudoers
+-w /etc/sudoers.d/ -p wa -k sudoers
+-w /etc/ssh/sshd_config -p wa -k sshd_config
+-w /etc/ssh/sshd_config.d/ -p wa -k sshd_config
+-w /etc/sssd/sssd.conf -p wa -k sssd_config
+-w /etc/krb5.conf -p wa -k kerberos_config
+-w /etc/krb5.conf.d/ -p wa -k kerberos_config
+-w /etc/ipa/default.conf -p wa -k ipa_client_config
+-w /etc/hosts -p wa -k hosts_file
+-w /etc/resolv.conf -p wa -k resolver_config
