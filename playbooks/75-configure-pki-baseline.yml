@@ -1,0 +1,8 @@
+---
+- name: Configure IDM PKI baseline
+  hosts: idm_servers
+  become: true
+  gather_facts: false
+
+  roles:
+    - pki_baseline

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run IRIVEN IDM PKI baseline check
+
+[Timer]
+OnCalendar={{ pki_baseline_timer_on_calendar }}
+Persistent=true
+Unit=idm-pki-baseline-check.service
+
+[Install]
+WantedBy=timers.target

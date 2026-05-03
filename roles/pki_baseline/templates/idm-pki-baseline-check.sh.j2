@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+LOG_DIR="{{ pki_baseline_log_dir }}"
+LOG_FILE="${LOG_DIR}/idm-pki-baseline-$(date +%F).log"
+HOST_FQDN="$(hostname -f 2>/dev/null || hostname)"
+WARNING_DAYS="{{ pki_baseline_warning_days }}"
+CRITICAL_DAYS="{{ pki_baseline_critical_days }}"
+
+mkdir -p "${LOG_DIR}"
+chmod 0750 "${LOG_DIR}"
+exec >> "${LOG_FILE}" 2>&1
+
+status=0
+
+log() {
+  echo "[$(date --iso-8601=seconds)] [$HOST_FQDN] $*"
+}
+
+warn() {
+  log "WARNING: $*"
+}
+
+fail() {
+  log "ERROR: $*"
+  status=1
+}
+
+check_command() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+check_pem_expiry() {
+  local label="$1"
+  local cert_file="$2"
+
+  if [ ! -f "$cert_file" ]; then
+    warn "${label}: certificate file not found: ${cert_file}"
+    return 0
+  fi
+
+  local end_date
+  end_date="$(openssl x509 -in "$cert_file" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
+
+  if [ -z "$end_date" ]; then
+    warn "${label}: unable to parse certificate: ${cert_file}"
+    return 0
+  fi
+
+  local end_epoch now_epoch remaining_days
+  end_epoch="$(date -d "$end_date" +%s)"
+  now_epoch="$(date +%s)"
+  remaining_days="$(( (end_epoch - now_epoch) / 86400 ))"
+
+  log "${label}: expires in ${remaining_days} days (${end_date})"
+
+  if [ "$remaining_days" -le "$CRITICAL_DAYS" ]; then
+    fail "${label}: certificate expiry critical (${remaining_days} days)"
+  elif [ "$remaining_days" -le "$WARNING_DAYS" ]; then
+    warn "${label}: certificate expiry warning (${remaining_days} days)"
+  fi
+}
+
+log "Starting IDM PKI baseline checks"
+
+{% if pki_baseline_check_certmonger %}
+if systemctl list-unit-files certmonger.service >/dev/null 2>&1; then
+  log "Checking certmonger service"
+  systemctl is-active --quiet certmonger || fail "certmonger is not active"
+
+  if check_command getcert; then
+    log "Listing certmonger tracked certificates"
+    getcert list || warn "getcert list failed"
+  fi
+fi
+{% endif %}
+
+{% if pki_baseline_check_ipa_ca %}
+log "Checking IPA CA files"
+check_pem_expiry "IPA CA certificate" "/etc/ipa/ca.crt"
+check_pem_expiry "IPA KDC CA bundle" "/var/lib/ipa-client/pki/kdc-ca-bundle.pem"
+check_pem_expiry "IPA client CA bundle" "/var/lib/ipa-client/pki/ca-bundle.pem"
+{% endif %}
+
+{% if pki_baseline_check_httpd_tls %}
+log "Checking HTTPD TLS certificates"
+if [ -d /etc/httpd/alias ] && check_command certutil; then
+  certutil -L -d /etc/httpd/alias || warn "Unable to list HTTPD NSS database"
+else
+  warn "HTTPD NSS database not found or certutil unavailable"
+fi
+{% endif %}
+
+{% if pki_baseline_check_ldap_tls %}
+log "Checking LDAP TLS certificates"
+if [ -d /etc/dirsrv ]; then
+  find /etc/dirsrv -type f \( -name "*.crt" -o -name "*.pem" \) -print | while read -r cert; do
+    check_pem_expiry "Directory Server certificate ${cert}" "$cert"
+  done
+else
+  warn "Directory Server configuration directory not found"
+fi
+{% endif %}
+
+if check_command ipa-certupdate; then
+  log "ipa-certupdate command is available"
+else
+  warn "ipa-certupdate command not found"
+fi
+
+if (( status == 0 )); then
+  log "IDM PKI baseline checks completed successfully"
+else
+  log "IDM PKI baseline checks completed with errors"
+fi
+
+exit "$status"

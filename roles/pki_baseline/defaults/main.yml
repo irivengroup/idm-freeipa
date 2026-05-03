@@ -1,0 +1,11 @@
+---
+pki_baseline_log_dir: /var/log/idm-pki-baseline
+pki_baseline_scripts_dir: /usr/local/libexec/idm-pki-baseline
+pki_baseline_warning_days: 30
+pki_baseline_critical_days: 15
+pki_baseline_timer_on_calendar: "*-*-* 03:15:00"
+pki_baseline_enable_timer: true
+pki_baseline_check_certmonger: true
+pki_baseline_check_ipa_ca: true
+pki_baseline_check_httpd_tls: true
+pki_baseline_check_ldap_tls: true

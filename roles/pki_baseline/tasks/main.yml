@@ -1,0 +1,70 @@
+---
+- name: Ensure PKI baseline dependencies are installed
+  ansible.builtin.dnf:
+    name:
+      - openssl
+      - certmonger
+      - nss-tools
+    state: present
+
+- name: Ensure PKI baseline directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ pki_baseline_log_dir }}"
+    - "{{ pki_baseline_scripts_dir }}"
+
+- name: Deploy PKI baseline check script
+  ansible.builtin.template:
+    src: idm-pki-baseline-check.sh.j2
+    dest: "{{ pki_baseline_scripts_dir }}/idm-pki-baseline-check.sh"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy PKI baseline systemd service
+  ansible.builtin.template:
+    src: idm-pki-baseline-check.service.j2
+    dest: /etc/systemd/system/idm-pki-baseline-check.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy PKI baseline systemd timer
+  ansible.builtin.template:
+    src: idm-pki-baseline-check.timer.j2
+    dest: /etc/systemd/system/idm-pki-baseline-check.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+  when: pki_baseline_enable_timer | bool
+
+- name: Flush systemd handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start PKI baseline timer
+  ansible.builtin.systemd:
+    name: idm-pki-baseline-check.timer
+    enabled: true
+    state: started
+  when: pki_baseline_enable_timer | bool
+
+- name: Validate PKI baseline script syntax
+  ansible.builtin.command: "bash -n {{ pki_baseline_scripts_dir }}/idm-pki-baseline-check.sh"
+  changed_when: false
+
+- name: Run PKI baseline check once
+  ansible.builtin.command: "{{ pki_baseline_scripts_dir }}/idm-pki-baseline-check.sh"
+  changed_when: false
+  register: pki_baseline_check_result
+  failed_when: pki_baseline_check_result.rc not in [0, 1]
+
+- name: Display PKI baseline check output
+  ansible.builtin.debug:
+    var: pki_baseline_check_result.stdout_lines

@@ -60,3 +60,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Audit baseline](audit-baseline.md)
 
 - [Baseline integration](baseline-integration.md)
+
+- [PKI baseline](pki-baseline.md)

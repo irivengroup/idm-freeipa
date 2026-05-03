@@ -1,0 +1,13 @@
+[Unit]
+Description=IRIVEN IDM PKI baseline check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart={{ pki_baseline_scripts_dir }}/idm-pki-baseline-check.sh
+Nice=10
+PrivateTmp=true
+NoNewPrivileges=true

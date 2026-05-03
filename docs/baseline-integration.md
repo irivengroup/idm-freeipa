@@ -11,6 +11,7 @@ Les baselines suivantes sont intégrées automatiquement dans les playbooks mét
 - `ssh_hardening`
 - `audit_baseline`
 - `ipa_monitoring_baseline`
+- `pki_baseline`
 
 ## Mapping par responsabilité
 
@@ -37,6 +38,7 @@ Rôles appliqués automatiquement :
 common_hosts
 chrony_server
 ipa_primary / ipa_replica
+pki_baseline
 ssh_hardening
 audit_baseline
 ipa_monitoring_baseline

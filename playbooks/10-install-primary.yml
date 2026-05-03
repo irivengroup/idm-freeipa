@@ -7,6 +7,7 @@
     - common_hosts
     - chrony_server
     - ipa_primary
+    - pki_baseline
     - ssh_hardening
     - audit_baseline
     - ipa_monitoring_baseline
