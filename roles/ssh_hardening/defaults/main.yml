@@ -1,10 +1,18 @@
 ---
+ssh_hardening_dropin_file: /etc/ssh/sshd_config.d/99-idm-hardening.conf
 ssh_hardening_permit_root_login: "no"
 ssh_hardening_password_authentication: "yes"
 ssh_hardening_pubkey_authentication: "yes"
 ssh_hardening_gssapi_authentication: "yes"
 ssh_hardening_use_pam: "yes"
 ssh_hardening_x11_forwarding: "no"
+ssh_hardening_allow_tcp_forwarding: "no"
+ssh_hardening_permit_empty_passwords: "no"
+ssh_hardening_kerberos_authentication: "yes"
+ssh_hardening_max_auth_tries: 3
+ssh_hardening_login_grace_time: 30
+ssh_hardening_client_alive_interval: 300
+ssh_hardening_client_alive_count_max: 2
 ssh_hardening_allow_groups:
   - linux-admins
   - devops-admins

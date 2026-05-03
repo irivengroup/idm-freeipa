@@ -1,0 +1,20 @@
+# Managed by Ansible - IRIVEN IDM Lab
+# Do not edit manually.
+
+PermitRootLogin {{ ssh_hardening_permit_root_login }}
+PasswordAuthentication {{ ssh_hardening_password_authentication }}
+PubkeyAuthentication {{ ssh_hardening_pubkey_authentication }}
+GSSAPIAuthentication {{ ssh_hardening_gssapi_authentication }}
+KerberosAuthentication {{ ssh_hardening_kerberos_authentication }}
+UsePAM {{ ssh_hardening_use_pam }}
+
+MaxAuthTries {{ ssh_hardening_max_auth_tries }}
+LoginGraceTime {{ ssh_hardening_login_grace_time }}
+ClientAliveInterval {{ ssh_hardening_client_alive_interval }}
+ClientAliveCountMax {{ ssh_hardening_client_alive_count_max }}
+
+X11Forwarding {{ ssh_hardening_x11_forwarding }}
+AllowTcpForwarding {{ ssh_hardening_allow_tcp_forwarding }}
+PermitEmptyPasswords {{ ssh_hardening_permit_empty_passwords }}
+
+AllowGroups {{ ssh_hardening_allow_groups | join(' ') }}
