@@ -1,0 +1,13 @@
+---
+secrets_baseline_vault_file: inventory/group_vars/all/vault.yml
+secrets_baseline_vault_example_file: inventory/group_vars/all/vault.yml.example
+secrets_baseline_required_vars:
+  - idm_admin_password
+  - idm_dm_password
+secrets_baseline_sensitive_patterns:
+  - password
+  - passwd
+  - secret
+  - token
+  - api_key
+  - apikey

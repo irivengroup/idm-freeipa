@@ -1,0 +1,44 @@
+---
+- name: Validate required sensitive variables are defined
+  ansible.builtin.assert:
+    that:
+      - lookup('vars', item, default='') | string | length > 0
+      - lookup('vars', item, default='') != 'CHANGE_ME_USE_ANSIBLE_VAULT'
+    fail_msg: "Required secret variable '{{ item }}' is missing or still uses the placeholder value."
+  loop: "{{ secrets_baseline_required_vars }}"
+  no_log: true
+
+- name: Check whether vault file exists locally
+  ansible.builtin.stat:
+    path: "{{ secrets_baseline_vault_file }}"
+  register: secrets_baseline_vault_stat
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Warn when vault file is absent
+  ansible.builtin.debug:
+    msg: "Vault file {{ secrets_baseline_vault_file }} does not exist. Create it from vault.yml.example and encrypt it."
+  when:
+    - not secrets_baseline_vault_stat.stat.exists
+  run_once: true
+
+- name: Read vault file header
+  ansible.builtin.command: "head -n 1 {{ secrets_baseline_vault_file }}"
+  register: secrets_baseline_vault_header
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: secrets_baseline_vault_stat.stat.exists
+
+- name: Validate vault file is encrypted
+  ansible.builtin.assert:
+    that:
+      - secrets_baseline_vault_header.stdout is search('^\$ANSIBLE_VAULT;')
+    fail_msg: "{{ secrets_baseline_vault_file }} exists but is not encrypted with Ansible Vault."
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: secrets_baseline_vault_stat.stat.exists

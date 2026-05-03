@@ -66,3 +66,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Log forwarding](log-forwarding.md)
 
 - [Log rotation](log-rotation.md)
+
+- [Secrets management](secrets-management.md)

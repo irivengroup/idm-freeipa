@@ -19,7 +19,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check that vault file is not committed
+      - name: Check Vault example exists
+        run: test -f inventory/group_vars/all/vault.yml.example
+
+      - name: Check that Vault file is not committed
         run: |
           vault_file="inventory/group_vars/all/vault.yml"
           if [ -f "$vault_file" ]; then

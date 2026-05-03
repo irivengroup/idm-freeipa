@@ -1,6 +1,33 @@
 ---
-# Copy to vault.yml and encrypt with:
-# ansible-vault encrypt inventory/group_vars/vault.yml
+# Copy this file to inventory/group_vars/all/vault.yml
+# Then encrypt it with:
+# ansible-vault encrypt inventory/group_vars/all/vault.yml
+
+# FreeIPA administrative account used by automation.
 idm_admin_principal: admin
-idm_admin_password: CHANGE_ME_WITH_ANSIBLE_VAULT
-idm_dm_password: CHANGE_ME_WITH_ANSIBLE_VAULT
+idm_admin_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+
+# FreeIPA Directory Manager password.
+idm_dm_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+
+# Client enrollment password.
+# Usually same as idm_admin_password, but kept explicit for clarity.
+ipa_client_admin_password: "{{ idm_admin_password }}"
+
+# Breakglass account initial password.
+# Rotate after first use and store outside Git.
+idm_breakglass_initial_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+
+# Optional offsite backup secret material.
+ipa_backup_offsite_enabled: false
+ipa_backup_offsite_command: ""
+
+# Optional rsyslog / SIEM forwarding secrets.
+log_forwarding_tls_enabled: false
+log_forwarding_tls_ca_file: ""
+log_forwarding_tls_cert_file: ""
+log_forwarding_tls_key_file: ""
+
+# Future AD Trust / external integration placeholders.
+ad_trust_admin_user: ""
+ad_trust_admin_password: ""

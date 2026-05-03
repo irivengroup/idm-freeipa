@@ -1,4 +1,7 @@
 ---
+- name: Validate secrets baseline
+  import_playbook: 88-validate-secrets.yml
+
 - name: Bootstrap common configuration
   import_playbook: 00-bootstrap-common.yml
 
