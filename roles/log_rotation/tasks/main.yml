@@ -15,3 +15,30 @@
 - name: Validate logrotate configuration
   ansible.builtin.command: logrotate -d /etc/logrotate.d/idm-lab
   changed_when: false
+
+- name: Check logrotate timer availability
+  ansible.builtin.command: systemctl list-unit-files logrotate.timer
+  register: log_rotation_timer_unit
+  changed_when: false
+  failed_when: false
+
+- name: Enable logrotate timer when available
+  ansible.builtin.systemd:
+    name: logrotate.timer
+    enabled: true
+    state: started
+  when: log_rotation_timer_unit.rc == 0
+
+- name: Check logrotate service availability
+  ansible.builtin.command: systemctl list-unit-files logrotate.service
+  register: log_rotation_service_unit
+  changed_when: false
+  failed_when: false
+
+- name: Ensure logrotate service is enabled when no timer exists
+  ansible.builtin.systemd:
+    name: logrotate.service
+    enabled: true
+  when:
+    - log_rotation_timer_unit.rc != 0
+    - log_rotation_service_unit.rc == 0

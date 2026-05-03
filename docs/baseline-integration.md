@@ -4,14 +4,15 @@
 
 ## Objectif
 
-Les rôles transverses ne doivent pas dépendre d'une exécution manuelle séparée.
+Les rôles transverses doivent être intégrés automatiquement dans les playbooks métier selon le niveau de responsabilité des hôtes.
 
-Les baselines suivantes sont intégrées automatiquement dans les playbooks métier selon le niveau de responsabilité des hôtes :
+Les baselines actuellement intégrées sont :
 
 - `ssh_hardening`
 - `audit_baseline`
+- `log_rotation`
 - `ipa_monitoring_baseline`
-- `pki_baseline`
+- `pki_baseline` pour les serveurs IDM
 
 ## Mapping par responsabilité
 
@@ -32,15 +33,13 @@ playbooks/10-install-primary.yml
 playbooks/20-install-replica.yml
 ```
 
-Rôles appliqués automatiquement :
+Rôles transverses appliqués :
 
 ```text
-common_hosts
-chrony_server
-ipa_primary / ipa_replica
 pki_baseline
 ssh_hardening
 audit_baseline
+log_rotation
 ipa_monitoring_baseline
 ```
 
@@ -58,14 +57,12 @@ Playbook :
 playbooks/40-configure-loadbalancers.yml
 ```
 
-Rôles appliqués automatiquement :
+Rôles transverses appliqués :
 
 ```text
-common_hosts
-chrony_client
-haproxy_freeipa_lb
 ssh_hardening
 audit_baseline
+log_rotation
 ipa_monitoring_baseline
 ```
 
@@ -84,55 +81,40 @@ Playbook :
 playbooks/30-enroll-clients.yml
 ```
 
-Rôles appliqués automatiquement :
+Rôles transverses appliqués :
 
 ```text
-common_hosts
-chrony_client
-ipa_client
 ssh_hardening
 audit_baseline
+log_rotation
 ipa_monitoring_baseline
 ```
 
-## Playbooks autonomes conservés
+## Log rotation automatique
 
-Les playbooks suivants restent disponibles pour réappliquer uniquement une baseline :
+Le rôle `log_rotation` déploie :
 
-```bash
-ansible-playbook -i inventory/hosts.ini playbooks/80-configure-monitoring-baseline.yml
-ansible-playbook -i inventory/hosts.ini playbooks/85-configure-audit-baseline.yml
+```text
+/etc/logrotate.d/idm-lab
 ```
 
-Ils ne sont plus requis dans le flux principal `site.yml`.
+et active automatiquement `logrotate.timer` lorsque l'unité existe.
 
-## Flux principal
+Validation :
 
 ```bash
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+systemctl status logrotate.timer
+systemctl list-timers logrotate.timer --no-pager
+logrotate -d /etc/logrotate.d/idm-lab
 ```
 
-Le flux principal applique désormais automatiquement :
+## Règle pour les futurs rôles
 
-1. socle commun ;
-2. Chrony ;
-3. installation IDM ;
-4. load balancers ;
-5. enrollment clients/admin ;
-6. RBAC ;
-7. backup ;
-8. healthcheck ;
-9. validation.
+Tout futur rôle transverse doit respecter cette règle :
 
-## Règle pour les futurs rôles transverses
-
-Tout futur rôle transverse doit être intégré dans les playbooks métier correspondant au périmètre de responsabilité :
-
-- IDM servers ;
-- admin hosts ;
-- load balancers ;
-- clients.
-
-Il peut également avoir un playbook autonome de réapplication ciblée.
+1. être intégré dans les playbooks métier correspondant à son scope ;
+2. disposer éventuellement d'un playbook autonome de réapplication ciblée ;
+3. être documenté dans `docs/` ;
+4. ne pas dépendre d'une exécution manuelle pour être actif dans le flux principal `site.yml`.
 
 [Retour à l'index](index.md)

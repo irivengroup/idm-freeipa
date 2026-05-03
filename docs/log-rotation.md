@@ -72,3 +72,16 @@ ls -lah /var/log/ipa-backup/
 - sauvegarder les journaux d’audit selon les exigences de conformité.
 
 [Retour à l'index](index.md)
+
+## Activation automatique
+
+Le rôle active `logrotate.timer` lorsque l'unité systemd est disponible.
+
+Validation :
+
+```bash
+systemctl status logrotate.timer
+systemctl list-timers logrotate.timer --no-pager
+```
+
+[Retour à l'index](index.md)

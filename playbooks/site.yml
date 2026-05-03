@@ -29,6 +29,9 @@
 - name: Configure FreeIPA backup automation
   import_playbook: 70-configure-backup.yml
 
+- name: Configure log rotation
+  import_playbook: 87-configure-log-rotation.yml
+
 - name: Run platform healthcheck
   import_playbook: 60-healthcheck.yml
 

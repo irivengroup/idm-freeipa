@@ -9,4 +9,5 @@
     - haproxy_freeipa_lb
     - ssh_hardening
     - audit_baseline
+    - log_rotation
     - ipa_monitoring_baseline
