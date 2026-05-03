@@ -4,9 +4,9 @@ Un outil Ansible permettant de déployer et d’administrer une infrastructure I
 
 ## 1. Présentation
 
-**IRIVEN IDM Lab** est une infrastructure de laboratoire professionnelle pour déployer, automatiser et valider une plateforme **Red Hat Identity Management (IdM) / FreeIPA** sur **Rocky Linux 10**.
+**IRIVEN IDM** est une solution Professionnelle pour déployer, automatiser et valider une plateforme **Red Hat Identity Management (IdM) / FreeIPA** sur **Rocky Linux 10**.
 
-Le projet fournit un socle proche production, piloté par **Ansible**, avec une attention particulière portée à l’idempotence, à la résilience et à la maintenabilité.
+Le projet fournit un socle Entreprise Grade, piloté par **Ansible**, avec une attention particulière portée à l’idempotence, à la résilience et à la maintenabilité.
 
 Il couvre notamment :
 
@@ -28,7 +28,7 @@ Il couvre notamment :
 
 Documentation complète : [docs/index.md](docs/index.md)
 
-L’objectif est de fournir un socle robuste pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements proches production.
+L’objectif est de fournir un socle robuste pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements de production.
 
 ---
 
