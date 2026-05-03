@@ -58,3 +58,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [SSH hardening](ssh-hardening.md)
 
 - [Audit baseline](audit-baseline.md)
+
+- [Baseline integration](baseline-integration.md)

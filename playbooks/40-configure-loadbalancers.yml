@@ -2,7 +2,11 @@
 - name: Configure IDM load balancers
   hosts: idm_loadbalancers
   become: true
+
   roles:
     - common_hosts
     - chrony_client
     - haproxy_freeipa_lb
+    - ssh_hardening
+    - audit_baseline
+    - ipa_monitoring_baseline

@@ -1,15 +1,36 @@
 ---
-- import_playbook: 00-bootstrap-common.yml
-- import_playbook: 05-configure-chrony-servers.yml
-- import_playbook: 10-install-primary.yml
-- import_playbook: 20-install-replica.yml
-- import_playbook: 25-configure-dns-ntp-records.yml
-- import_playbook: 40-configure-loadbalancers.yml
-- import_playbook: 06-configure-chrony-clients.yml
-- import_playbook: 30-enroll-clients.yml
-- import_playbook: 50-configure-rbac.yml
-- import_playbook: 60-healthcheck.yml
-- import_playbook: 90-validate-platform.yml
+- name: Bootstrap common configuration
+  import_playbook: 00-bootstrap-common.yml
 
-# Backup automation can be run independently:
-# ansible-playbook -i inventory/hosts.ini playbooks/70-configure-backup.yml
+- name: Configure Chrony on IDM servers
+  import_playbook: 05-configure-chrony-servers.yml
+
+- name: Install FreeIPA primary
+  import_playbook: 10-install-primary.yml
+
+- name: Install FreeIPA replica
+  import_playbook: 20-install-replica.yml
+
+- name: Configure DNS and NTP records
+  import_playbook: 25-configure-dns-ntp-records.yml
+
+- name: Configure load balancers
+  import_playbook: 40-configure-loadbalancers.yml
+
+- name: Configure Chrony on clients and admin hosts
+  import_playbook: 06-configure-chrony-clients.yml
+
+- name: Enroll clients and administration host
+  import_playbook: 30-enroll-clients.yml
+
+- name: Configure RBAC, HBAC and sudo policies
+  import_playbook: 50-configure-rbac.yml
+
+- name: Configure FreeIPA backup automation
+  import_playbook: 70-configure-backup.yml
+
+- name: Run platform healthcheck
+  import_playbook: 60-healthcheck.yml
+
+- name: Validate platform
+  import_playbook: 90-validate-platform.yml

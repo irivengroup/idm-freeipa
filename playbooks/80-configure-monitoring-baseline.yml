@@ -1,5 +1,5 @@
 ---
-- name: Configure IDM monitoring baseline
+- name: Reapply IDM monitoring baseline
   hosts: idm_servers:idm_loadbalancers:idm_clients:idm_admin
   become: true
   gather_facts: false

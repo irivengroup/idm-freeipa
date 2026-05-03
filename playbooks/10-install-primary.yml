@@ -2,7 +2,11 @@
 - name: Install FreeIPA primary
   hosts: idm_primary
   become: true
+
   roles:
     - common_hosts
     - chrony_server
     - ipa_primary
+    - ssh_hardening
+    - audit_baseline
+    - ipa_monitoring_baseline
