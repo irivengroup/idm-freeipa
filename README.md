@@ -1,4 +1,4 @@
-# Linux Identity Management (IDM) Infra
+# Linux Identity Management (IDM) Bootstrap
 
 Un outil Ansible permettant de déployer et d’administrer une infrastructure IDM basée sur FreeIPA / RedHat Identity Management (IdM) sous Rocky Linux 10.
 
