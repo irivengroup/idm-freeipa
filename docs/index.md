@@ -80,3 +80,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Disaster Recovery readiness check](disaster-recovery-check.md)
 
 - [Compliance check](compliance-check.md)
+
+- [OpenSCAP readiness check](oscap-readiness-check.md)

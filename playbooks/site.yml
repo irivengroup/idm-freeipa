@@ -55,3 +55,6 @@
 
 - name: Run platform compliance check
   import_playbook: 96-compliance-check.yml
+
+- name: Run OpenSCAP readiness check
+  import_playbook: 97-oscap-readiness-check.yml
