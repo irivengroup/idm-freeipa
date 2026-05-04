@@ -1,27 +1,129 @@
 ---
-- name: Install IPA healthcheck package
+- name: Install IPA healthcheck package on IDM servers
   ansible.builtin.package:
     name: ipa-healthcheck
     state: present
+  when: inventory_hostname in groups.get('idm_servers', [])
 
 - name: Correct PKI CA CS.cfg permissions
   ansible.builtin.file:
     path: /var/lib/pki/pki-tomcat/conf/ca/CS.cfg
     owner: pkiuser
     group: pkiuser
-    mode: '0660'
-  when: inventory_hostname in groups['idm_primary']
+    mode: "0660"
+  when: inventory_hostname in groups.get('idm_primary', [])
 
-- name: Run IPA healthcheck
+- name: DNS healthcheck - primary
+  ansible.builtin.command: "getent hosts {{ idm_primary_fqdn }}"
+  changed_when: false
+
+- name: DNS healthcheck - replica
+  ansible.builtin.command: "getent hosts {{ idm_replica_fqdn }}"
+  changed_when: false
+
+- name: DNS healthcheck - load balancer VIP
+  ansible.builtin.command: "getent hosts {{ idm_lb_vip_fqdn }}"
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_lb_dns
+
+- name: Kerberos keytab healthcheck
+  ansible.builtin.command: klist -k /etc/krb5.keytab
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_keytab
+
+- name: SSSD domain healthcheck
+  ansible.builtin.command: "sssctl domain-status {{ idm_domain | default('iriven.lab') }}"
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_sssd
+
+- name: Identity lookup healthcheck
+  ansible.builtin.command: id admin
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_identity
+
+- name: Chrony healthcheck
+  ansible.builtin.command: chronyc tracking
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_chrony
+
+- name: FreeIPA service healthcheck
+  ansible.builtin.command: ipactl status
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_ipactl
+  when: inventory_hostname in groups.get('idm_servers', [])
+
+- name: FreeIPA native healthcheck
   ansible.builtin.shell: |
+    set -euo pipefail
     kinit -k
     ipa-healthcheck --output-type human
   args:
     executable: /bin/bash
-  register: ipa_healthcheck_result
+  register: ipa_healthcheck_native_result
   changed_when: false
-  failed_when: ipa_healthcheck_result.rc not in [0, 1]
+  failed_when: ipa_healthcheck_native_result.rc not in [0, 1]
+  when: inventory_hostname in groups.get('idm_servers', [])
 
-- name: Display IPA healthcheck output
+- name: HAProxy service healthcheck
+  ansible.builtin.command: systemctl is-active haproxy
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_haproxy
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: HAProxy configuration healthcheck
+  ansible.builtin.command: haproxy -c -f /etc/haproxy/haproxy.cfg
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_haproxy_config
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Backup timer healthcheck
+  ansible.builtin.command: systemctl is-enabled ipa-backup-iriven.timer
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_backup_timer
+  when: inventory_hostname in groups.get('idm_primary', [])
+
+- name: PKI timer healthcheck
+  ansible.builtin.command: systemctl is-enabled idm-pki-baseline-check.timer
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_pki_timer
+  when: inventory_hostname in groups.get('idm_servers', [])
+
+- name: SSH daemon configuration healthcheck
+  ansible.builtin.command: sshd -t
+  changed_when: false
+  failed_when: false
+  register: ipa_healthcheck_sshd
+
+- name: Display unified healthcheck summary
   ansible.builtin.debug:
-    var: ipa_healthcheck_result.stdout_lines
+    msg:
+      host: "{{ inventory_hostname }}"
+      lb_dns_rc: "{{ ipa_healthcheck_lb_dns.rc | default('skipped') }}"
+      keytab_rc: "{{ ipa_healthcheck_keytab.rc | default('skipped') }}"
+      sssd_rc: "{{ ipa_healthcheck_sssd.rc | default('skipped') }}"
+      identity_rc: "{{ ipa_healthcheck_identity.rc | default('skipped') }}"
+      chrony_rc: "{{ ipa_healthcheck_chrony.rc | default('skipped') }}"
+      ipactl_rc: "{{ ipa_healthcheck_ipactl.rc | default('skipped') }}"
+      native_healthcheck_rc: "{{ ipa_healthcheck_native_result.rc | default('skipped') }}"
+      haproxy_rc: "{{ ipa_healthcheck_haproxy.rc | default('skipped') }}"
+      haproxy_config_rc: "{{ ipa_healthcheck_haproxy_config.rc | default('skipped') }}"
+      backup_timer_rc: "{{ ipa_healthcheck_backup_timer.rc | default('skipped') }}"
+      pki_timer_rc: "{{ ipa_healthcheck_pki_timer.rc | default('skipped') }}"
+      sshd_rc: "{{ ipa_healthcheck_sshd.rc | default('skipped') }}"
+
+- name: Display IPA native healthcheck output
+  ansible.builtin.debug:
+    var: ipa_healthcheck_native_result.stdout_lines
+  when:
+    - inventory_hostname in groups.get('idm_servers', [])
+    - ipa_healthcheck_native_result is defined

@@ -70,3 +70,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Secrets management](secrets-management.md)
 
 - [Restore runbook](restore-runbook.md)
+
+- [Platform healthcheck](healthcheck.md)

@@ -1,6 +1,8 @@
 ---
-- name: Run FreeIPA healthcheck
-  hosts: idm_servers
+- name: Run unified platform healthcheck
+  hosts: idm_all
   become: true
+  gather_facts: false
+
   roles:
     - ipa_healthcheck
