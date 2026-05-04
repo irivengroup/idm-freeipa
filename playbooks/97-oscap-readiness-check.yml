@@ -1,0 +1,8 @@
+---
+- name: Run OpenSCAP readiness check
+  hosts: idm_all
+  become: true
+  gather_facts: false
+
+  roles:
+    - oscap_readiness_check

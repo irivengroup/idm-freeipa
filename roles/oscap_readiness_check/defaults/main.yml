@@ -1,0 +1,18 @@
+---
+oscap_readiness_report_dir: /var/log/idm-oscap
+oscap_readiness_install_packages: true
+oscap_readiness_packages:
+  - openscap-scanner
+  - scap-security-guide
+oscap_readiness_run_scan: false
+oscap_readiness_fail_on_scan_error: false
+oscap_readiness_profile: ""
+oscap_readiness_datastream_candidates:
+  - /usr/share/xml/scap/ssg/content/ssg-rl10-ds.xml
+  - /usr/share/xml/scap/ssg/content/ssg-rl9-ds.xml
+  - /usr/share/xml/scap/ssg/content/ssg-rhel10-ds.xml
+  - /usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml
+oscap_readiness_default_profile_candidates:
+  - xccdf_org.ssgproject.content_profile_cis
+  - xccdf_org.ssgproject.content_profile_cis_server_l1
+  - xccdf_org.ssgproject.content_profile_standard

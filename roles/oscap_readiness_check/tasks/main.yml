@@ -1,0 +1,117 @@
+---
+- name: Ensure OpenSCAP report directory exists
+  ansible.builtin.file:
+    path: "{{ oscap_readiness_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install OpenSCAP readiness packages
+  ansible.builtin.dnf:
+    name: "{{ oscap_readiness_packages }}"
+    state: present
+  when: oscap_readiness_install_packages | bool
+
+- name: Check oscap command availability
+  ansible.builtin.command: command -v oscap
+  changed_when: false
+  failed_when: false
+  register: oscap_readiness_command
+
+- name: Assert oscap command is available
+  ansible.builtin.assert:
+    that:
+      - oscap_readiness_command.rc == 0
+    fail_msg: "OpenSCAP scanner is not available."
+
+- name: Check candidate SCAP datastream files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ oscap_readiness_datastream_candidates }}"
+  register: oscap_readiness_datastream_stats
+
+- name: Select first available SCAP datastream
+  ansible.builtin.set_fact:
+    oscap_readiness_datastream: >-
+      {{
+        (
+          oscap_readiness_datastream_stats.results
+          | selectattr('stat.exists', 'equalto', true)
+          | map(attribute='item')
+          | list
+          | first
+        ) | default('')
+      }}
+
+- name: Assert SCAP datastream is available
+  ansible.builtin.assert:
+    that:
+      - oscap_readiness_datastream | length > 0
+    fail_msg: "No supported SCAP datastream found."
+
+- name: List available OpenSCAP profiles
+  ansible.builtin.command: "oscap info {{ oscap_readiness_datastream }}"
+  changed_when: false
+  register: oscap_readiness_info
+
+- name: Save OpenSCAP profile inventory
+  ansible.builtin.copy:
+    dest: "{{ oscap_readiness_report_dir }}/{{ inventory_hostname }}-profiles.txt"
+    owner: root
+    group: root
+    mode: "0640"
+    content: "{{ oscap_readiness_info.stdout }}\n"
+
+- name: Select OpenSCAP profile when not explicitly provided
+  ansible.builtin.set_fact:
+    oscap_readiness_effective_profile: >-
+      {{
+        oscap_readiness_profile
+        if oscap_readiness_profile | length > 0
+        else (
+          oscap_readiness_default_profile_candidates
+          | select('in', oscap_readiness_info.stdout)
+          | list
+          | first
+          | default('')
+        )
+      }}
+
+- name: Write OpenSCAP readiness report
+  ansible.builtin.copy:
+    dest: "{{ oscap_readiness_report_dir }}/{{ inventory_hostname }}-readiness.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      Host: {{ inventory_hostname }}
+      oscap rc: {{ oscap_readiness_command.rc }}
+      datastream: {{ oscap_readiness_datastream }}
+      selected_profile: {{ oscap_readiness_effective_profile | default('') }}
+      scan_enabled: {{ oscap_readiness_run_scan }}
+
+- name: Run optional OpenSCAP evaluation scan
+  ansible.builtin.command: >
+    oscap xccdf eval
+    --profile {{ oscap_readiness_effective_profile }}
+    --results-arf {{ oscap_readiness_report_dir }}/{{ inventory_hostname }}-oscap-results.arf.xml
+    --report {{ oscap_readiness_report_dir }}/{{ inventory_hostname }}-oscap-report.html
+    {{ oscap_readiness_datastream }}
+  changed_when: false
+  failed_when:
+    - oscap_readiness_fail_on_scan_error | bool
+    - oscap_readiness_scan.rc != 0
+  register: oscap_readiness_scan
+  when:
+    - oscap_readiness_run_scan | bool
+    - oscap_readiness_effective_profile | length > 0
+
+- name: Display OpenSCAP readiness summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      datastream: "{{ oscap_readiness_datastream }}"
+      selected_profile: "{{ oscap_readiness_effective_profile | default('') }}"
+      scan_enabled: "{{ oscap_readiness_run_scan }}"
+      report_dir: "{{ oscap_readiness_report_dir }}"
