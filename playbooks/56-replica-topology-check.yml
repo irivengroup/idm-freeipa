@@ -1,0 +1,8 @@
+---
+- name: Run FreeIPA replica topology check
+  hosts: idm_servers
+  become: true
+  gather_facts: false
+
+  roles:
+    - replica_topology_check

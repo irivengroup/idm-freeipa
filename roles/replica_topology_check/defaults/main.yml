@@ -1,0 +1,7 @@
+---
+replica_topology_check_report_dir: /var/log/idm-replica-topology
+replica_topology_check_validate_ca_topology: true
+replica_topology_check_fail_on_warnings: false
+replica_topology_check_required_dns_records:
+  - _ldap._tcp
+  - _kerberos._tcp

@@ -1,0 +1,135 @@
+---
+- name: Ensure replica topology report directory exists
+  ansible.builtin.file:
+    path: "{{ replica_topology_check_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Obtain Kerberos ticket with keytab
+  ansible.builtin.command: kinit -k
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_kinit
+
+- name: Check IPA service status
+  ansible.builtin.command: ipactl status
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_ipactl
+
+- name: Check IPA server inventory
+  ansible.builtin.command: ipa server-find --sizelimit=0
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_servers
+
+- name: Check domain topology segments
+  ansible.builtin.command: ipa topologysegment-find domain
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_domain_segments
+
+- name: Check CA topology segments
+  ansible.builtin.command: ipa topologysegment-find ca
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_ca_segments
+  when: replica_topology_check_validate_ca_topology | bool
+
+- name: Validate DNS SRV records
+  ansible.builtin.command: "ipa dnsrecord-find {{ idm_domain | default('iriven.lab') }} --name={{ item }}"
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_dns_records
+  loop: "{{ replica_topology_check_required_dns_records }}"
+
+- name: Check certmonger tracking
+  ansible.builtin.command: getcert list
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_getcert
+
+- name: Check replica agreement visibility
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if command -v ipa-replica-manage >/dev/null 2>&1; then
+      ipa-replica-manage list -v || true
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false
+  failed_when: false
+  register: replica_topology_check_replica_manage
+
+- name: Build topology findings
+  ansible.builtin.set_fact:
+    replica_topology_check_findings: >-
+      {{
+        []
+        + (['Kerberos keytab authentication failed'] if replica_topology_check_kinit.rc != 0 else [])
+        + (['ipactl status failed'] if replica_topology_check_ipactl.rc != 0 else [])
+        + (['IPA server inventory lookup failed'] if replica_topology_check_servers.rc != 0 else [])
+        + (['domain topology segment lookup failed'] if replica_topology_check_domain_segments.rc != 0 else [])
+        + (['CA topology segment lookup failed'] if (replica_topology_check_ca_segments.rc is defined and replica_topology_check_ca_segments.rc != 0) else [])
+        + (['certmonger inventory lookup failed'] if replica_topology_check_getcert.rc != 0 else [])
+      }}
+
+- name: Write replica topology report
+  ansible.builtin.copy:
+    dest: "{{ replica_topology_check_report_dir }}/{{ inventory_hostname }}-replica-topology.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # Replica topology and promotion readiness report
+
+      Host: {{ inventory_hostname }}
+
+      ## Findings
+      {{ replica_topology_check_findings | join('\n') if replica_topology_check_findings | length > 0 else 'none' }}
+
+      ## IPA services
+      ```text
+      {{ replica_topology_check_ipactl.stdout | default('skipped') }}
+      ```
+
+      ## IPA servers
+      ```text
+      {{ replica_topology_check_servers.stdout | default('unavailable') }}
+      ```
+
+      ## Domain topology
+      ```text
+      {{ replica_topology_check_domain_segments.stdout | default('unavailable') }}
+      ```
+
+      ## CA topology
+      ```text
+      {{ replica_topology_check_ca_segments.stdout | default('skipped') }}
+      ```
+
+      ## Replica manage
+      ```text
+      {{ replica_topology_check_replica_manage.stdout | default('unavailable') }}
+      ```
+
+      ## Certmonger
+      ```text
+      {{ replica_topology_check_getcert.stdout | default('skipped') }}
+      ```
+
+- name: Display replica topology summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      findings: "{{ replica_topology_check_findings }}"
+      report: "{{ replica_topology_check_report_dir }}/{{ inventory_hostname }}-replica-topology.report"
+
+- name: Fail when topology warnings are detected and strict mode is enabled
+  ansible.builtin.assert:
+    that:
+      - replica_topology_check_findings | length == 0
+    fail_msg: "Replica topology check failed: {{ replica_topology_check_findings | join(', ') }}"
+  when: replica_topology_check_fail_on_warnings | bool

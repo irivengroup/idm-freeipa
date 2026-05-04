@@ -41,6 +41,9 @@
 - name: Generate effective RBAC report
   import_playbook: 55-rbac-reporting.yml
 
+- name: Run FreeIPA replica topology check
+  import_playbook: 56-replica-topology-check.yml
+
 - name: Run platform healthcheck
   import_playbook: 60-healthcheck.yml
 

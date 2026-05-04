@@ -88,3 +88,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Inventory and host groups](inventory-groups.md)
 
 - [RBAC reporting](rbac-reporting.md)
+
+- [Replica topology check](replica-topology-check.md)
