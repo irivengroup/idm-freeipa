@@ -6,7 +6,7 @@
 
 Le rôle existant `ipa_healthcheck` centralise les validations opérationnelles de la plateforme.
 
-Il intègre désormais les smoke tests non destructifs précédemment envisagés dans `platform_smoke_tests`.
+Il intègre désormais les health checks non destructifs précédemment envisagés dans `platform_smoke_tests`.
 
 ## Playbook
 

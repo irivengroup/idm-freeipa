@@ -72,3 +72,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Restore runbook](restore-runbook.md)
 
 - [Platform healthcheck](healthcheck.md)
+
+- [HA failover check](ha-failover-check.md)

@@ -1,0 +1,11 @@
+---
+ha_failover_check_vip_fqdn: "{{ idm_lb_vip_fqdn | default('idmloadbalancer.iriven.lab') }}"
+ha_failover_check_vip_ip: "{{ idm_lb_vip | default('192.168.1.55') }}"
+ha_failover_check_domain: "{{ idm_domain | default('iriven.lab') }}"
+ha_failover_check_ldap_port: 389
+ha_failover_check_kerberos_port: 88
+ha_failover_check_https_port: 443
+ha_failover_check_haproxy_stats_port: "{{ haproxy_stats_port | default(8404) }}"
+ha_failover_check_enable_disruptive_checks: false
+ha_failover_check_keepalived_service: keepalived
+ha_failover_check_pause_seconds: 10

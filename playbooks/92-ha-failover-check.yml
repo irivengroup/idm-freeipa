@@ -1,0 +1,8 @@
+---
+- name: Run HA failover checks
+  hosts: idm_loadbalancers
+  become: true
+  gather_facts: false
+
+  roles:
+    - ha_failover_check

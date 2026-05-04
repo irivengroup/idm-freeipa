@@ -1,0 +1,115 @@
+---
+- name: Resolve HA VIP FQDN
+  ansible.builtin.command: "getent hosts {{ ha_failover_check_vip_fqdn }}"
+  changed_when: false
+  register: ha_failover_check_vip_resolution
+
+- name: Check local HAProxy service
+  ansible.builtin.command: systemctl is-active haproxy
+  changed_when: false
+  failed_when: false
+  register: ha_failover_check_haproxy_status
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Check local Keepalived service
+  ansible.builtin.command: "systemctl is-active {{ ha_failover_check_keepalived_service }}"
+  changed_when: false
+  failed_when: false
+  register: ha_failover_check_keepalived_status
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Check VIP presence on load balancer interfaces
+  ansible.builtin.command: "ip address show"
+  changed_when: false
+  failed_when: false
+  register: ha_failover_check_ip_address_show
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Report VIP local ownership
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      vip: "{{ ha_failover_check_vip_ip }}"
+      owns_vip: "{{ ha_failover_check_vip_ip in ha_failover_check_ip_address_show.stdout }}"
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Check LDAP through VIP
+  ansible.builtin.wait_for:
+    host: "{{ ha_failover_check_vip_fqdn }}"
+    port: "{{ ha_failover_check_ldap_port }}"
+    timeout: 5
+  delegate_to: "{{ groups.get('idm_admin', [inventory_hostname])[0] }}"
+  run_once: true
+
+- name: Check Kerberos through VIP
+  ansible.builtin.wait_for:
+    host: "{{ ha_failover_check_vip_fqdn }}"
+    port: "{{ ha_failover_check_kerberos_port }}"
+    timeout: 5
+  delegate_to: "{{ groups.get('idm_admin', [inventory_hostname])[0] }}"
+  run_once: true
+
+- name: Check HTTPS through VIP
+  ansible.builtin.wait_for:
+    host: "{{ ha_failover_check_vip_fqdn }}"
+    port: "{{ ha_failover_check_https_port }}"
+    timeout: 5
+  delegate_to: "{{ groups.get('idm_admin', [inventory_hostname])[0] }}"
+  run_once: true
+
+- name: Check HAProxy configuration on load balancers
+  ansible.builtin.command: haproxy -c -f /etc/haproxy/haproxy.cfg
+  changed_when: false
+  failed_when: false
+  register: ha_failover_check_haproxy_config
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Disruptive failover check notice
+  ansible.builtin.debug:
+    msg: "Disruptive failover checks are disabled. Set ha_failover_check_enable_disruptive_checks=true to stop Keepalived temporarily."
+  run_once: true
+  when: not ha_failover_check_enable_disruptive_checks | bool
+
+- name: Run controlled Keepalived failover check
+  when:
+    - ha_failover_check_enable_disruptive_checks | bool
+    - inventory_hostname == groups.get('idm_loadbalancers', [])[0]
+  block:
+    - name: Stop Keepalived on first load balancer
+      ansible.builtin.systemd:
+        name: "{{ ha_failover_check_keepalived_service }}"
+        state: stopped
+
+    - name: Wait for VIP failover
+      ansible.builtin.pause:
+        seconds: "{{ ha_failover_check_pause_seconds }}"
+
+    - name: Check LDAP through VIP after failover
+      ansible.builtin.wait_for:
+        host: "{{ ha_failover_check_vip_fqdn }}"
+        port: "{{ ha_failover_check_ldap_port }}"
+        timeout: 10
+      delegate_to: "{{ groups.get('idm_admin', [inventory_hostname])[0] }}"
+
+    - name: Check HTTPS through VIP after failover
+      ansible.builtin.wait_for:
+        host: "{{ ha_failover_check_vip_fqdn }}"
+        port: "{{ ha_failover_check_https_port }}"
+        timeout: 10
+      delegate_to: "{{ groups.get('idm_admin', [inventory_hostname])[0] }}"
+
+  always:
+    - name: Restart Keepalived on first load balancer
+      ansible.builtin.systemd:
+        name: "{{ ha_failover_check_keepalived_service }}"
+        state: started
+        enabled: true
+
+- name: Display HA failover check summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      haproxy_rc: "{{ ha_failover_check_haproxy_status.rc | default('skipped') }}"
+      keepalived_rc: "{{ ha_failover_check_keepalived_status.rc | default('skipped') }}"
+      haproxy_config_rc: "{{ ha_failover_check_haproxy_config.rc | default('skipped') }}"
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
