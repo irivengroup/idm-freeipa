@@ -58,3 +58,6 @@
 
 - name: Run OpenSCAP readiness check
   import_playbook: 97-oscap-readiness-check.yml
+
+- name: Run project release readiness check
+  import_playbook: 98-release-readiness-check.yml

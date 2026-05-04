@@ -1,0 +1,45 @@
+---
+release_readiness_report_dir: /var/log/idm-release-readiness
+release_readiness_project_root: "{{ playbook_dir | dirname }}"
+release_readiness_required_paths:
+  - ansible.cfg
+  - README.md
+  - docs/index.md
+  - inventory/hosts.ini
+  - inventory/group_vars/all/common.yml
+  - inventory/group_vars/all/rbac.yml
+  - inventory/group_vars/all/vault.yml.example
+  - playbooks/site.yml
+  - .github/workflows/ci.yml
+  - .github/workflows/security.yml
+  - .github/workflows/docs.yml
+release_readiness_forbidden_paths:
+  - inventory/group_vars/all/vault.yml
+release_readiness_required_playbooks:
+  - playbooks/00-bootstrap-common.yml
+  - playbooks/10-install-primary.yml
+  - playbooks/20-install-replica.yml
+  - playbooks/30-enroll-clients.yml
+  - playbooks/40-configure-loadbalancers.yml
+  - playbooks/50-configure-rbac.yml
+  - playbooks/60-healthcheck.yml
+  - playbooks/70-configure-backup.yml
+  - playbooks/88-validate-secrets.yml
+  - playbooks/96-compliance-check.yml
+  - playbooks/97-oscap-readiness-check.yml
+release_readiness_required_roles:
+  - common_hosts
+  - ipa_primary
+  - ipa_replica
+  - ipa_client
+  - ipa_rbac
+  - ipa_healthcheck
+  - ssh_hardening
+  - audit_baseline
+  - log_rotation
+  - ipa_backup
+  - pki_baseline
+  - patch_baseline
+  - compliance_check
+  - oscap_readiness_check
+release_readiness_fail_on_error: true

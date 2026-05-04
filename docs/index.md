@@ -82,3 +82,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Compliance check](compliance-check.md)
 
 - [OpenSCAP readiness check](oscap-readiness-check.md)
+
+- [Release readiness check](release-readiness-check.md)

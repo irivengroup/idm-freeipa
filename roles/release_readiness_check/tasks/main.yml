@@ -1,0 +1,80 @@
+---
+- name: Ensure release readiness report directory exists
+  ansible.builtin.file:
+    path: "{{ release_readiness_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Check required project paths
+  ansible.builtin.stat:
+    path: "{{ release_readiness_project_root }}/{{ item }}"
+  loop: "{{ release_readiness_required_paths }}"
+  register: release_readiness_required_path_stats
+
+- name: Check forbidden project paths
+  ansible.builtin.stat:
+    path: "{{ release_readiness_project_root }}/{{ item }}"
+  loop: "{{ release_readiness_forbidden_paths }}"
+  register: release_readiness_forbidden_path_stats
+
+- name: Check required playbooks
+  ansible.builtin.stat:
+    path: "{{ release_readiness_project_root }}/{{ item }}"
+  loop: "{{ release_readiness_required_playbooks }}"
+  register: release_readiness_playbook_stats
+
+- name: Check required roles
+  ansible.builtin.stat:
+    path: "{{ release_readiness_project_root }}/roles/{{ item }}"
+  loop: "{{ release_readiness_required_roles }}"
+  register: release_readiness_role_stats
+
+- name: Validate Ansible inventory
+  ansible.builtin.command: "ansible-inventory -i {{ release_readiness_project_root }}/inventory/hosts.ini --list"
+  changed_when: false
+  failed_when: false
+  register: release_readiness_inventory
+
+- name: Build release readiness missing lists
+  ansible.builtin.set_fact:
+    release_readiness_missing_paths: "{{ release_readiness_required_path_stats.results | rejectattr('stat.exists', 'equalto', true) | map(attribute='item') | list }}"
+    release_readiness_forbidden_present: "{{ release_readiness_forbidden_path_stats.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item') | list }}"
+    release_readiness_missing_playbooks: "{{ release_readiness_playbook_stats.results | rejectattr('stat.exists', 'equalto', true) | map(attribute='item') | list }}"
+    release_readiness_missing_roles: "{{ release_readiness_role_stats.results | rejectattr('stat.exists', 'equalto', true) | map(attribute='item') | list }}"
+
+- name: Write release readiness report
+  ansible.builtin.copy:
+    dest: "{{ release_readiness_report_dir }}/release-readiness.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      Project root: {{ release_readiness_project_root }}
+      Missing paths: {{ release_readiness_missing_paths | join(', ') if release_readiness_missing_paths | length > 0 else 'none' }}
+      Forbidden present: {{ release_readiness_forbidden_present | join(', ') if release_readiness_forbidden_present | length > 0 else 'none' }}
+      Missing playbooks: {{ release_readiness_missing_playbooks | join(', ') if release_readiness_missing_playbooks | length > 0 else 'none' }}
+      Missing roles: {{ release_readiness_missing_roles | join(', ') if release_readiness_missing_roles | length > 0 else 'none' }}
+      Inventory rc: {{ release_readiness_inventory.rc }}
+
+- name: Display release readiness summary
+  ansible.builtin.debug:
+    msg:
+      missing_paths: "{{ release_readiness_missing_paths }}"
+      forbidden_present: "{{ release_readiness_forbidden_present }}"
+      missing_playbooks: "{{ release_readiness_missing_playbooks }}"
+      missing_roles: "{{ release_readiness_missing_roles }}"
+      inventory_rc: "{{ release_readiness_inventory.rc }}"
+      report: "{{ release_readiness_report_dir }}/release-readiness.report"
+
+- name: Fail when release readiness errors are detected
+  ansible.builtin.assert:
+    that:
+      - release_readiness_missing_paths | length == 0
+      - release_readiness_forbidden_present | length == 0
+      - release_readiness_missing_playbooks | length == 0
+      - release_readiness_missing_roles | length == 0
+      - release_readiness_inventory.rc == 0
+    fail_msg: "Release readiness failed. Review {{ release_readiness_report_dir }}/release-readiness.report"
+  when: release_readiness_fail_on_error | bool

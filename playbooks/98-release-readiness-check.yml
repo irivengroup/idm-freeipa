@@ -1,0 +1,9 @@
+---
+- name: Run project release readiness check
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: false
+
+  roles:
+    - release_readiness_check
