@@ -28,11 +28,15 @@
       - sudo
     state: present
 
-- name: Enable firewalld
+- name: Enable mandatories services
   ansible.builtin.service:
-    name: firewalld
+    name: "{{ item }}"
     state: started
     enabled: true
+  with_items:
+    - sshd
+    - chronyd
+    - firewalld
 
 - name: Set SELinux permissive runtime
   ansible.builtin.command: setenforce 0
@@ -44,3 +48,4 @@
     path: /etc/selinux/config
     regexp: '^SELINUX=.*'
     replace: 'SELINUX=permissive'
+
