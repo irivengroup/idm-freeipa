@@ -68,3 +68,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Log rotation](log-rotation.md)
 
 - [Secrets management](secrets-management.md)
+
+- [Restore runbook](restore-runbook.md)

@@ -1,8 +1,14 @@
 ---
 ipa_backup_dir: /var/backups/ipa
 ipa_backup_log_dir: /var/log/ipa-backup
+ipa_backup_manifest_dir: /var/backups/ipa/manifests
 ipa_backup_retention_days: 14
 ipa_backup_timer_on_calendar: "*-*-* 02:30:00"
 ipa_backup_include_data: true
 ipa_backup_offsite_enabled: false
-ipa_backup_offsite_command: ""
+ipa_backup_offsite_target: "idmadmin.iriven.lab:/srv/backups/freeipa"
+ipa_backup_offsite_rsync_options: "-a --delete --numeric-ids"
+ipa_backup_integrity_check_enabled: true
+ipa_backup_restore_readiness_required_files:
+  - /etc/ipa/default.conf
+  - /etc/krb5.conf
