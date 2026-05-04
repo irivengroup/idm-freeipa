@@ -1,0 +1,7 @@
+---
+patch_baseline_enabled: true
+patch_baseline_apply_updates: false
+patch_baseline_security_only: true
+patch_baseline_exclude_packages: []
+patch_baseline_reboot_allowed: false
+patch_baseline_report_dir: /var/log/idm-patch-baseline

@@ -1,0 +1,91 @@
+---
+- name: Ensure patch baseline report directory exists
+  ansible.builtin.file:
+    path: "{{ patch_baseline_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install dnf plugins
+  ansible.builtin.dnf:
+    name:
+      - dnf-plugins-core
+    state: present
+
+- name: Check available security updates
+  ansible.builtin.command: dnf updateinfo list security
+  changed_when: false
+  failed_when: false
+  register: patch_baseline_security_updates
+  when: patch_baseline_security_only | bool
+
+- name: Check all available updates
+  ansible.builtin.command: dnf check-update
+  changed_when: false
+  failed_when: false
+  register: patch_baseline_all_updates
+  when: not patch_baseline_security_only | bool
+
+- name: Save patch baseline report
+  ansible.builtin.copy:
+    dest: "{{ patch_baseline_report_dir }}/{{ inventory_hostname }}.report"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      Host: {{ inventory_hostname }}
+      Security only mode: {{ patch_baseline_security_only }}
+      Apply updates: {{ patch_baseline_apply_updates }}
+      Timestamp: {{ ansible_date_time.iso8601 | default('runtime') }}
+
+      === Security updates ===
+      {{ patch_baseline_security_updates.stdout | default('not requested') }}
+
+      === All updates ===
+      {{ patch_baseline_all_updates.stdout | default('not requested') }}
+
+- name: Apply security updates when explicitly enabled
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    security: true
+    exclude: "{{ patch_baseline_exclude_packages }}"
+    update_only: true
+  when:
+    - patch_baseline_apply_updates | bool
+    - patch_baseline_security_only | bool
+
+- name: Apply all updates when explicitly enabled
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    exclude: "{{ patch_baseline_exclude_packages }}"
+    update_only: true
+  when:
+    - patch_baseline_apply_updates | bool
+    - not patch_baseline_security_only | bool
+
+- name: Check if reboot is required
+  ansible.builtin.command: needs-restarting -r
+  changed_when: false
+  failed_when: false
+  register: patch_baseline_reboot_check
+  when: patch_baseline_apply_updates | bool
+
+- name: Reboot host when allowed and required
+  ansible.builtin.reboot:
+    reboot_timeout: 1800
+  when:
+    - patch_baseline_apply_updates | bool
+    - patch_baseline_reboot_allowed | bool
+    - patch_baseline_reboot_check.rc is defined
+    - patch_baseline_reboot_check.rc != 0
+
+- name: Display patch baseline summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      apply_updates: "{{ patch_baseline_apply_updates }}"
+      security_only: "{{ patch_baseline_security_only }}"
+      reboot_required_rc: "{{ patch_baseline_reboot_check.rc | default('not_checked') }}"

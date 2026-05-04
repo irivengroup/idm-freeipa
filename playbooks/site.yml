@@ -46,3 +46,6 @@
 
 - name: Run HA failover checks
   import_playbook: 92-ha-failover-check.yml
+
+- name: Run patch baseline checks
+  import_playbook: 94-patch-baseline-check.yml
