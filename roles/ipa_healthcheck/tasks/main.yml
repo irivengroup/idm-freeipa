@@ -16,16 +16,25 @@
 - name: DNS healthcheck - primary
   ansible.builtin.command: "getent hosts {{ idm_primary_fqdn }}"
   changed_when: false
+  when:
+    - idm_primary_fqdn is defined
+    - idm_primary_fqdn | length > 0
 
 - name: DNS healthcheck - replica
   ansible.builtin.command: "getent hosts {{ idm_replica_fqdn }}"
   changed_when: false
+  when:
+    - idm_replica_fqdn is defined
+    - idm_replica_fqdn | length > 0
 
 - name: DNS healthcheck - load balancer VIP
   ansible.builtin.command: "getent hosts {{ idm_lb_vip_fqdn }}"
   changed_when: false
   failed_when: false
   register: ipa_healthcheck_lb_dns
+  when:
+    - idm_lb_vip_fqdn is defined
+    - idm_lb_vip_fqdn | length > 0
 
 - name: Kerberos keytab healthcheck
   ansible.builtin.command: klist -k /etc/krb5.keytab
