@@ -1,0 +1,176 @@
+---
+- name: Ensure compliance report directory exists
+  ansible.builtin.file:
+    path: "{{ compliance_check_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Check common services
+  ansible.builtin.command: "systemctl is-active {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: compliance_check_common_services
+  loop: "{{ compliance_check_required_services_common }}"
+
+- name: Check common timers
+  ansible.builtin.command: "systemctl is-enabled {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: compliance_check_common_timers
+  loop: "{{ compliance_check_required_timers_common }}"
+
+- name: Check IDM timers
+  ansible.builtin.command: "systemctl is-enabled {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: compliance_check_idm_timers_result
+  loop: "{{ compliance_check_idm_timers }}"
+  when: inventory_hostname in groups.get('idm_servers', [])
+
+- name: Check primary timers
+  ansible.builtin.command: "systemctl is-enabled {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: compliance_check_primary_timers_result
+  loop: "{{ compliance_check_primary_timers }}"
+  when: inventory_hostname in groups.get('idm_primary', [])
+
+- name: Check SELinux runtime mode
+  ansible.builtin.command: getenforce
+  changed_when: false
+  failed_when: false
+  register: compliance_check_selinux_runtime
+
+- name: Check SSH hardening drop-in
+  ansible.builtin.stat:
+    path: "{{ compliance_check_ssh_dropin_file }}"
+  register: compliance_check_ssh_dropin
+
+- name: Check audit sudoers file
+  ansible.builtin.stat:
+    path: "{{ compliance_check_audit_sudoers_file }}"
+  register: compliance_check_audit_sudoers
+
+- name: Check journald audit drop-in
+  ansible.builtin.stat:
+    path: "{{ compliance_check_journald_file }}"
+  register: compliance_check_journald
+
+- name: Check logrotate policy
+  ansible.builtin.stat:
+    path: "{{ compliance_check_logrotate_file }}"
+  register: compliance_check_logrotate
+
+- name: Validate SSH daemon configuration
+  ansible.builtin.command: sshd -t
+  changed_when: false
+  failed_when: false
+  register: compliance_check_sshd
+
+- name: Validate logrotate policy
+  ansible.builtin.command: "logrotate -d {{ compliance_check_logrotate_file }}"
+  changed_when: false
+  failed_when: false
+  register: compliance_check_logrotate_validation
+  when: compliance_check_logrotate.stat.exists
+
+- name: Check IPA service status on IDM servers
+  ansible.builtin.command: ipactl status
+  changed_when: false
+  failed_when: false
+  register: compliance_check_ipactl
+  when: inventory_hostname in groups.get('idm_servers', [])
+
+- name: Check HAProxy status on load balancers
+  ansible.builtin.command: systemctl is-active haproxy
+  changed_when: false
+  failed_when: false
+  register: compliance_check_haproxy
+  when: inventory_hostname in groups.get('idm_loadbalancers', [])
+
+- name: Build compliance facts
+  ansible.builtin.set_fact:
+    compliance_check_non_compliant_items: >-
+      {{
+        []
+        + (
+            ['ssh_dropin_missing']
+            if not compliance_check_ssh_dropin.stat.exists else []
+          )
+        + (
+            ['audit_sudoers_missing']
+            if not compliance_check_audit_sudoers.stat.exists else []
+          )
+        + (
+            ['journald_audit_missing']
+            if not compliance_check_journald.stat.exists else []
+          )
+        + (
+            ['logrotate_policy_missing']
+            if not compliance_check_logrotate.stat.exists else []
+          )
+        + (
+            ['sshd_config_invalid']
+            if compliance_check_sshd.rc != 0 else []
+          )
+        + (
+            ['logrotate_policy_invalid']
+            if (compliance_check_logrotate_validation.rc is defined and compliance_check_logrotate_validation.rc != 0) else []
+          )
+      }}
+
+- name: Write compliance report
+  ansible.builtin.copy:
+    dest: "{{ compliance_check_report_dir }}/{{ inventory_hostname }}-compliance.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      Host: {{ inventory_hostname }}
+      SELinux runtime: {{ compliance_check_selinux_runtime.stdout | default('unknown') }}
+
+      === Common services ===
+      {% for item in compliance_check_common_services.results %}
+      {{ item.item }}: rc={{ item.rc }}
+      {% endfor %}
+
+      === Common timers ===
+      {% for item in compliance_check_common_timers.results %}
+      {{ item.item }}: rc={{ item.rc }}
+      {% endfor %}
+
+      === Files ===
+      SSH drop-in: {{ compliance_check_ssh_dropin.stat.exists }}
+      Audit sudoers: {{ compliance_check_audit_sudoers.stat.exists }}
+      Journald audit: {{ compliance_check_journald.stat.exists }}
+      Logrotate policy: {{ compliance_check_logrotate.stat.exists }}
+
+      === Validation ===
+      sshd -t rc: {{ compliance_check_sshd.rc }}
+      logrotate rc: {{ compliance_check_logrotate_validation.rc | default('skipped') }}
+      ipactl rc: {{ compliance_check_ipactl.rc | default('skipped') }}
+      haproxy rc: {{ compliance_check_haproxy.rc | default('skipped') }}
+
+      === Non-compliant items ===
+      {{ compliance_check_non_compliant_items | join(', ') if compliance_check_non_compliant_items | length > 0 else 'none' }}
+
+- name: Display compliance summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      selinux: "{{ compliance_check_selinux_runtime.stdout | default('unknown') }}"
+      ssh_dropin: "{{ compliance_check_ssh_dropin.stat.exists }}"
+      audit_sudoers: "{{ compliance_check_audit_sudoers.stat.exists }}"
+      journald_audit: "{{ compliance_check_journald.stat.exists }}"
+      logrotate_policy: "{{ compliance_check_logrotate.stat.exists }}"
+      non_compliant_items: "{{ compliance_check_non_compliant_items }}"
+      report: "{{ compliance_check_report_dir }}/{{ inventory_hostname }}-compliance.report"
+
+- name: Fail when non-compliance is detected and strict mode is enabled
+  ansible.builtin.assert:
+    that:
+      - compliance_check_non_compliant_items | length == 0
+    fail_msg: "Compliance check failed on {{ inventory_hostname }}: {{ compliance_check_non_compliant_items | join(', ') }}"
+  when: compliance_check_fail_on_non_compliance | bool

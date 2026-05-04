@@ -1,0 +1,8 @@
+---
+- name: Run platform compliance check
+  hosts: idm_all
+  become: true
+  gather_facts: false
+
+  roles:
+    - compliance_check

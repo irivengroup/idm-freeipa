@@ -1,0 +1,17 @@
+---
+compliance_check_report_dir: /var/log/idm-compliance
+compliance_check_ssh_dropin_file: /etc/ssh/sshd_config.d/99-idm-hardening.conf
+compliance_check_logrotate_file: /etc/logrotate.d/idm-lab
+compliance_check_audit_sudoers_file: /etc/sudoers.d/99-idm-audit
+compliance_check_journald_file: /etc/systemd/journald.conf.d/99-idm-audit.conf
+compliance_check_required_services_common:
+  - firewalld
+  - chronyd
+  - rsyslog
+compliance_check_required_timers_common:
+  - logrotate.timer
+compliance_check_idm_timers:
+  - idm-pki-baseline-check.timer
+compliance_check_primary_timers:
+  - ipa-backup-iriven.timer
+compliance_check_fail_on_non_compliance: false

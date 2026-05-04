@@ -78,3 +78,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Patch management baseline](patch-management.md)
 
 - [Disaster Recovery readiness check](disaster-recovery-check.md)
+
+- [Compliance check](compliance-check.md)

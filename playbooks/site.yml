@@ -52,3 +52,6 @@
 
 - name: Run patch baseline checks
   import_playbook: 94-patch-baseline-check.yml
+
+- name: Run platform compliance check
+  import_playbook: 96-compliance-check.yml
