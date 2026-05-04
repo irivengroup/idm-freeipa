@@ -5,6 +5,7 @@ release_readiness_required_paths:
   - ansible.cfg
   - README.md
   - docs/index.md
+  - docs/inventory-groups.md
   - inventory/hosts.ini
   - inventory/group_vars/all/common.yml
   - inventory/group_vars/all/rbac.yml

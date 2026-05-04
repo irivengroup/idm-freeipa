@@ -13,23 +13,11 @@
 - name: Build IPA hostgroup membership from Ansible inventory
   ansible.builtin.set_fact:
     idm_rbac_hostgroup_members:
-      linux-all: >-
-        {{(
-            groups.get('idm_servers', []) +
-            groups.get('idm_clients', []) +
-            groups.get('idm_loadbalancers', []) +
-            groups.get('idm_admin', []) +
-            groups.get('app_servers', []) +
-            groups.get('db_servers', []) +
-            groups.get('jump_hosts', [])
-          ) | unique}}
-      idm-servers: "{{groups.get('idm_servers', []) | unique}}"
-      app-servers: "{{groups.get('app_servers', []) | default([]) | unique}}"
-      db-servers: "{{groups.get('db_servers', []) | default([]) | unique}}"
-      jump-hosts: >-
-        {{(groups.get('jump_hosts', []) if (groups.get('jump_hosts', []) | length > 0)
-           else groups.get('idm_admin', [])) | unique}}
-  run_once: true
+      linux-all: "{{ groups.get('idm_all', []) | unique | list }}"
+      idm-servers: "{{ groups.get('idm_servers', []) | unique | list }}"
+      app-servers: "{{ groups.get('app_servers', []) | unique | list }}"
+      db-servers: "{{ groups.get('db_servers', []) | unique | list }}"
+      jump-hosts: "{{ (groups.get('jump_hosts', []) + groups.get('idm_admin', [])) | unique | list }}"
 
 - name: Ensure RBAC user groups exist
   ansible.builtin.shell: |

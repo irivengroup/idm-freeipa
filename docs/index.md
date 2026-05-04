@@ -84,3 +84,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [OpenSCAP readiness check](oscap-readiness-check.md)
 
 - [Release readiness check](release-readiness-check.md)
+
+- [Inventory and host groups](inventory-groups.md)
