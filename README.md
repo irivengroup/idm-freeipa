@@ -1,12 +1,12 @@
-# Linux Identity Management (IDM) Bootstrap
+# Linux Identity Management (IDM) Infra
 
 Un outil Ansible permettant de déployer et d’administrer une infrastructure IDM basée sur FreeIPA / RedHat Identity Management (IdM) sous Rocky Linux 10.
 
 ## 1. Présentation
 
-**IRIVEN IDM** est une solution Professionnelle pour déployer, automatiser et valider une plateforme **Red Hat Identity Management (IdM) / FreeIPA** sur **Rocky Linux 10**.
+**IRIVEN IDM** est une solution professionnelle permettant de déployer, sécuriser, automatiser et exploiter une plateforme **Red Hat Identity Management (IdM) / FreeIPA** sur **Rocky Linux 10**.
 
-Le projet fournit un socle Entreprise Grade, piloté par **Ansible**, avec une attention particulière portée à l’idempotence, à la résilience et à la maintenabilité.
+Le projet fournit un socle **Enterprise Grade**, piloté par **Ansible**, avec une attention forte portée à l’idempotence, à la résilience, à l’auditabilité et à la maintenabilité.
 
 Il couvre notamment :
 
@@ -24,13 +24,24 @@ Il couvre notamment :
 - sudo rules
 - HBAC rules
 - matrice RBAC production-grade
-- healthchecks et validations post-déploiement
+- healthchecks unifiés post-déploiement
+- validation HA / failover contrôlé
+- baseline de supervision et monitoring
+- baseline audit et journalisation
+- rotation automatique des logs
+- hardening SSH
+- baseline PKI
+- baseline patch management
+- sauvegardes FreeIPA automatisées
+- restore readiness checks
+- GitHub Actions CI/CD
 
 Documentation complète : [docs/index.md](docs/index.md)
 
-L’objectif est de fournir un socle robuste pour l’apprentissage avancé, la démonstration technique et la préparation d’environnements de production.
+L’objectif est de fournir un environnement robuste, proche production, pour l’apprentissage avancé, la démonstration technique, l’audit d’architecture et la préparation d’infrastructures professionnelles.
 
 ---
+
 
 ## 2. Architecture cible
 
@@ -218,53 +229,75 @@ Cette version intègre :
 - matrice RBAC dans `inventory/group_vars/all/rbac.yml`
 - inventory utilisé comme source de vérité des hosts
 - groupe `[idm_servers:children]` pour primary + replica
-- rôles Ansible par responsabilité
-- playbooks courts appelant les rôles
+- rôles Ansible organisés par responsabilité
+- playbooks courts appelant les rôles métier
 - configuration NTP serveur/client
-- configuration HAProxy résiliente
-- RBAC/HBAC/sudo idempotents
+- configuration HAProxy + Keepalived résiliente
+- RBAC / HBAC / sudo idempotents
 - hostgroups IPA construits depuis l’inventaire
-- playbooks compatibles avec ajouts futurs `app_servers`, `db_servers`, `jump_hosts`
+- DNS client cohérent via NetworkManager
+- hardening SSH via `/etc/ssh/sshd_config.d/`
+- baseline audit Linux
+- rotation automatique des logs
+- baseline monitoring et healthcheck unifié (`60-healthcheck.yml`)
+- baseline PKI avec contrôles périodiques
+- sauvegardes FreeIPA automatisées + rétention + manifestes
+- restore readiness check
+- patch management contrôlé (mode check par défaut)
+- validation HA failover avec checks non disruptifs
+- GitHub Actions pour lint, validation et documentation
+- playbooks compatibles avec les futurs `app_servers`, `db_servers`, `jump_hosts`
 
 ---
+
 
 ## 8. Limites connues
 
-Ce projet reste un lab avancé. Pour une production réelle, compléter avec :
+Le projet fournit un socle fortement industrialisé, mais pour une production réelle à grande échelle, il reste recommandé de compléter avec :
 
-- sauvegardes automatisées et testées
-- restauration documentée
-- supervision centralisée
-- centralisation des logs
-- rotation des secrets
-- MFA
-- PRA / PCA
-- durcissement TLS/PKI
-- procédures de patching
-- segmentation réseau formelle
+- supervision centralisée complète (Prometheus, Grafana, SIEM…)
+- centralisation avancée des logs
+- rotation et coffre-fort de secrets (Vault, HSM…)
+- MFA et politiques d’accès renforcées
+- PRA / PCA formalisés et testés régulièrement
+- durcissement TLS/PKI avancé
+- procédures de patching avec validation métier
+- segmentation réseau formelle et micro-segmentation
+- gouvernance IAM complète
+- intégration CMDB / ITSM
+- capacity planning et tests de charge
+- stratégie multi-sites de reprise complète
 
 ---
 
+
 ## 9. Finalité pédagogique
 
-Ce lab permet de pratiquer une architecture IdM complète :
+Ce lab permet de pratiquer une architecture IdM complète avec un niveau proche production :
 
-- Déploiement FreeIPA Primary / Replica
+- déploiement FreeIPA Primary / Replica
 - DNS intégré
 - Kerberos
 - LDAP / LDAPS
+- PKI
 - réplication
 - enrollment client
 - SSSD
-- HAProxy + failover
+- HAProxy + Keepalived + failover
 - chrony / NTP maîtrisé
 - sudo IPA
 - HBAC
 - RBAC production-grade
+- healthchecks unifiés
+- patch management contrôlé
+- sauvegarde / restore readiness
+- audit et journalisation
+- hardening SSH
 - validation de résilience
 - exploitation automatisée avec Ansible
+- logique CI/CD et validation continue
 
-L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence et les bonnes pratiques d’exploitation.
+L’ensemble a été conçu avec un focus fort sur la maintenabilité, l’idempotence, la traçabilité et les bonnes pratiques d’exploitation d’une plateforme IAM moderne.
 
 ---
 
