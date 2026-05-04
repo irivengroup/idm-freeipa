@@ -1,0 +1,93 @@
+---
+- name: Ensure RBAC reporting output directory exists
+  ansible.builtin.file:
+    path: "{{ rbac_reporting_output_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Obtain Kerberos ticket with keytab
+  ansible.builtin.command: kinit -k
+  changed_when: false
+  failed_when: false
+
+- name: Export IPA RBAC objects
+  ansible.builtin.command: "{{ item.command }}"
+  changed_when: false
+  failed_when: false
+  register: rbac_reporting_exports
+  loop:
+    - name: groups
+      command: ipa group-find --sizelimit=0
+    - name: hostgroups
+      command: ipa hostgroup-find --sizelimit=0
+    - name: sudorules
+      command: ipa sudorule-find --sizelimit=0
+    - name: hbacrules
+      command: ipa hbacrule-find --sizelimit=0
+    - name: roles
+      command: ipa role-find --sizelimit=0
+
+- name: Check expected user groups
+  ansible.builtin.command: "ipa group-show {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: rbac_reporting_group_checks
+  loop: "{{ rbac_reporting_expected_user_groups }}"
+
+- name: Check expected hostgroups
+  ansible.builtin.command: "ipa hostgroup-show {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: rbac_reporting_hostgroup_checks
+  loop: "{{ rbac_reporting_expected_hostgroups }}"
+
+- name: Build RBAC report facts
+  ansible.builtin.set_fact:
+    rbac_reporting_missing_user_groups: "{{ rbac_reporting_group_checks.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+    rbac_reporting_missing_hostgroups: "{{ rbac_reporting_hostgroup_checks.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+
+- name: Write RBAC Markdown report
+  ansible.builtin.copy:
+    dest: "{{ rbac_reporting_output_dir }}/rbac-effective-report.md"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # Effective RBAC Report
+
+      ## Missing user groups
+      {{ rbac_reporting_missing_user_groups | join(', ') if rbac_reporting_missing_user_groups | length > 0 else 'none' }}
+
+      ## Missing hostgroups
+      {{ rbac_reporting_missing_hostgroups | join(', ') if rbac_reporting_missing_hostgroups | length > 0 else 'none' }}
+
+      {% for item in rbac_reporting_exports.results %}
+      ## {{ item.item.name }}
+
+      ```text
+      {{ item.stdout }}
+      ```
+
+      {% endfor %}
+
+- name: Write RBAC JSON report
+  ansible.builtin.copy:
+    dest: "{{ rbac_reporting_output_dir }}/rbac-effective-report.json"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      {
+        "missing_user_groups": {{ rbac_reporting_missing_user_groups | to_json }},
+        "missing_hostgroups": {{ rbac_reporting_missing_hostgroups | to_json }}
+      }
+
+- name: Display RBAC reporting summary
+  ansible.builtin.debug:
+    msg:
+      markdown: "{{ rbac_reporting_output_dir }}/rbac-effective-report.md"
+      json: "{{ rbac_reporting_output_dir }}/rbac-effective-report.json"
+      missing_user_groups: "{{ rbac_reporting_missing_user_groups }}"
+      missing_hostgroups: "{{ rbac_reporting_missing_hostgroups }}"

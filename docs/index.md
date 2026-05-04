@@ -86,3 +86,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Release readiness check](release-readiness-check.md)
 
 - [Inventory and host groups](inventory-groups.md)
+
+- [RBAC reporting](rbac-reporting.md)

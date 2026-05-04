@@ -1,0 +1,8 @@
+---
+- name: Generate effective RBAC report
+  hosts: idm_primary
+  become: true
+  gather_facts: false
+
+  roles:
+    - rbac_reporting

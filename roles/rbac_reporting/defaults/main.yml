@@ -1,0 +1,15 @@
+---
+rbac_reporting_output_dir: /var/log/idm-rbac-reporting
+rbac_reporting_expected_user_groups:
+  - linux-admins
+  - devops-admins
+  - security-auditors
+  - db-admins
+  - idm-admins
+  - breakglass-admins
+rbac_reporting_expected_hostgroups:
+  - linux-all
+  - idm-servers
+  - app-servers
+  - db-servers
+  - jump-hosts
