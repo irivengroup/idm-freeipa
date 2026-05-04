@@ -76,3 +76,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [HA failover check](ha-failover-check.md)
 
 - [Patch management baseline](patch-management.md)
+
+- [Disaster Recovery readiness check](disaster-recovery-check.md)

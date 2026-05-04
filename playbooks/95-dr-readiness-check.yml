@@ -1,0 +1,8 @@
+---
+- name: Run Disaster Recovery readiness check
+  hosts: idm_primary
+  become: true
+  gather_facts: false
+
+  roles:
+    - dr_readiness_check

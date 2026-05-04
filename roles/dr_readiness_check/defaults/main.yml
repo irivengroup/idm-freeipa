@@ -1,0 +1,29 @@
+---
+dr_readiness_check_backup_dir: "{{ ipa_backup_dir | default('/var/backups/ipa') }}"
+dr_readiness_check_manifest_dir: "{{ ipa_backup_manifest_dir | default('/var/backups/ipa/manifests') }}"
+dr_readiness_check_log_dir: /var/log/idm-dr-readiness
+dr_readiness_check_required_files:
+  - /etc/ipa/default.conf
+  - /etc/krb5.conf
+  - /etc/hosts
+  - /etc/resolv.conf
+dr_readiness_check_required_services:
+  - dirsrv@{{ idm_realm | default('IRIVEN-LAB') | replace('.', '-') }}.service
+  - krb5kdc.service
+  - kadmin.service
+  - httpd.service
+  - named.service
+dr_readiness_check_required_commands:
+  - ipa
+  - ipa-backup
+  - ipa-restore
+  - ipactl
+  - getcert
+  - kinit
+dr_readiness_check_validate_replication: true
+dr_readiness_check_validate_pki: true
+dr_readiness_check_validate_dns: true
+dr_readiness_check_validate_secrets: true
+dr_readiness_check_required_secret_vars:
+  - idm_admin_password
+  - idm_dm_password

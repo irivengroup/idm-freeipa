@@ -1,0 +1,155 @@
+---
+- name: Ensure DR readiness log directory exists
+  ansible.builtin.file:
+    path: "{{ dr_readiness_check_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Check required DR commands
+  ansible.builtin.command: "command -v {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: dr_readiness_check_commands
+  loop: "{{ dr_readiness_check_required_commands }}"
+
+- name: Assert required DR commands are available
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+    fail_msg: "Required DR command is missing: {{ item.item }}"
+  loop: "{{ dr_readiness_check_commands.results }}"
+
+- name: Check required configuration files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: dr_readiness_check_files
+  loop: "{{ dr_readiness_check_required_files }}"
+
+- name: Assert required configuration files exist
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: "Required DR configuration file is missing: {{ item.item }}"
+  loop: "{{ dr_readiness_check_files.results }}"
+
+- name: Check IPA service status
+  ansible.builtin.command: ipactl status
+  changed_when: false
+  failed_when: false
+  register: dr_readiness_check_ipactl
+
+- name: Assert IPA services are operational
+  ansible.builtin.assert:
+    that:
+      - dr_readiness_check_ipactl.rc == 0
+    fail_msg: "ipactl status failed. DR readiness cannot be validated safely."
+
+- name: Check backup directory
+  ansible.builtin.stat:
+    path: "{{ dr_readiness_check_backup_dir }}"
+  register: dr_readiness_check_backup_dir_stat
+
+- name: Assert backup directory exists
+  ansible.builtin.assert:
+    that:
+      - dr_readiness_check_backup_dir_stat.stat.exists
+      - dr_readiness_check_backup_dir_stat.stat.isdir
+    fail_msg: "Backup directory is missing: {{ dr_readiness_check_backup_dir }}"
+
+- name: Find IPA backup directories
+  ansible.builtin.find:
+    paths: "{{ dr_readiness_check_backup_dir }}"
+    file_type: directory
+    patterns: "ipa-full-*"
+  register: dr_readiness_check_backups
+
+- name: Assert at least one IPA backup exists
+  ansible.builtin.assert:
+    that:
+      - dr_readiness_check_backups.matched | int > 0
+    fail_msg: "No IPA backup found. Run the IPA backup service before DR validation."
+
+- name: Find IPA backup manifests
+  ansible.builtin.find:
+    paths: "{{ dr_readiness_check_manifest_dir }}"
+    file_type: file
+    patterns: "*.manifest"
+  register: dr_readiness_check_manifests
+
+- name: Assert at least one backup manifest exists
+  ansible.builtin.assert:
+    that:
+      - dr_readiness_check_manifests.matched | int > 0
+    fail_msg: "No backup manifest found. Backup traceability is incomplete."
+
+- name: Validate critical secret variables are defined
+  ansible.builtin.assert:
+    that:
+      - lookup('vars', item, default='') | string | length > 0
+      - lookup('vars', item, default='') != 'CHANGE_ME_USE_ANSIBLE_VAULT'
+    fail_msg: "Required DR secret variable is missing or still uses a placeholder: {{ item }}"
+  loop: "{{ dr_readiness_check_required_secret_vars }}"
+  no_log: true
+  when: dr_readiness_check_validate_secrets | bool
+
+- name: Validate DNS SRV records
+  ansible.builtin.command: "ipa dnsrecord-find {{ idm_domain | default('iriven.lab') }} --name={{ item }}"
+  changed_when: false
+  failed_when: false
+  register: dr_readiness_check_dns_srv
+  loop:
+    - _ldap._tcp
+    - _kerberos._tcp
+  when: dr_readiness_check_validate_dns | bool
+
+- name: Validate replication topology
+  ansible.builtin.command: ipa topologysegment-find domain
+  changed_when: false
+  failed_when: false
+  register: dr_readiness_check_replication
+  when: dr_readiness_check_validate_replication | bool
+
+- name: Validate certmonger inventory
+  ansible.builtin.command: getcert list
+  changed_when: false
+  failed_when: false
+  register: dr_readiness_check_getcert
+  when: dr_readiness_check_validate_pki | bool
+
+- name: Write DR readiness report
+  ansible.builtin.copy:
+    dest: "{{ dr_readiness_check_log_dir }}/{{ inventory_hostname }}-dr-readiness.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      Host: {{ inventory_hostname }}
+      Backup directory: {{ dr_readiness_check_backup_dir }}
+      Backup count: {{ dr_readiness_check_backups.matched | default(0) }}
+      Manifest count: {{ dr_readiness_check_manifests.matched | default(0) }}
+      ipactl rc: {{ dr_readiness_check_ipactl.rc | default('unknown') }}
+      Replication rc: {{ dr_readiness_check_replication.rc | default('skipped') }}
+      PKI certmonger rc: {{ dr_readiness_check_getcert.rc | default('skipped') }}
+
+      === Latest backups ===
+      {% for backup in dr_readiness_check_backups.files | sort(attribute='mtime', reverse=true) %}
+      {{ backup.path }}
+      {% endfor %}
+
+      === Manifests ===
+      {% for manifest in dr_readiness_check_manifests.files | sort(attribute='mtime', reverse=true) %}
+      {{ manifest.path }}
+      {% endfor %}
+
+- name: Display DR readiness summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      backups: "{{ dr_readiness_check_backups.matched | default(0) }}"
+      manifests: "{{ dr_readiness_check_manifests.matched | default(0) }}"
+      ipactl_rc: "{{ dr_readiness_check_ipactl.rc | default('unknown') }}"
+      replication_rc: "{{ dr_readiness_check_replication.rc | default('skipped') }}"
+      pki_rc: "{{ dr_readiness_check_getcert.rc | default('skipped') }}"
+      report: "{{ dr_readiness_check_log_dir }}/{{ inventory_hostname }}-dr-readiness.report"
