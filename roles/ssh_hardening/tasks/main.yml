@@ -1,8 +1,19 @@
 ---
+- name: Build SSH admin source and excluded target host facts
+  ansible.builtin.set_fact:
+    ssh_hardening_admin_source_hosts: "{{ (groups.get('idm_admin', []) + groups.get('jump_hosts', [])) | unique | list }}"
+    ssh_hardening_admin_target_excluded_hosts: "{{ (groups.get('idm_admin', []) + groups.get('jump_hosts', [])) | unique | list }}"
+
 - name: Ensure OpenSSH server is installed
   ansible.builtin.dnf:
     name: openssh-server
     state: present
+
+- name: Ensure SSH client tooling is installed on admin and jump hosts
+  ansible.builtin.dnf:
+    name: openssh-clients
+    state: present
+  when: inventory_hostname in ssh_hardening_admin_source_hosts
 
 - name: Ensure SSH drop-in directory exists
   ansible.builtin.file:
@@ -30,6 +41,71 @@
 - name: Validate sshd configuration
   ansible.builtin.command: sshd -t
   changed_when: false
+
+- name: Ensure admin SSH directory exists on admin and jump hosts
+  ansible.builtin.file:
+    path: "/home/{{ ssh_hardening_admin_key_user }}/.ssh"
+    state: directory
+    owner: "{{ ssh_hardening_admin_key_user }}"
+    group: "{{ ssh_hardening_admin_key_user }}"
+    mode: "0700"
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname in ssh_hardening_admin_source_hosts
+
+- name: Generate admin SSH key when absent
+  community.crypto.openssh_keypair:
+    path: "/home/{{ ssh_hardening_admin_key_user }}/{{ ssh_hardening_admin_key_path }}"
+    type: "{{ ssh_hardening_admin_key_type }}"
+    owner: "{{ ssh_hardening_admin_key_user }}"
+    group: "{{ ssh_hardening_admin_key_user }}"
+    mode: "0600"
+    comment: "{{ ssh_hardening_admin_key_comment }}"
+    force: false
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname in ssh_hardening_admin_source_hosts
+
+- name: Read admin public SSH key
+  ansible.builtin.slurp:
+    src: "/home/{{ ssh_hardening_admin_key_user }}/{{ ssh_hardening_admin_key_path }}.pub"
+  register: ssh_hardening_admin_public_key
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname in ssh_hardening_admin_source_hosts
+
+- name: Publish admin public SSH key as host fact
+  ansible.builtin.set_fact:
+    ssh_hardening_admin_public_key_value: "{{ ssh_hardening_admin_public_key.content | b64decode | trim }}"
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname in ssh_hardening_admin_source_hosts
+    - ssh_hardening_admin_public_key is defined
+    - ssh_hardening_admin_public_key.content is defined
+
+- name: Ensure target user SSH directory exists on enrolled servers
+  ansible.builtin.file:
+    path: "/home/{{ ssh_hardening_admin_key_user }}/.ssh"
+    state: directory
+    owner: "{{ ssh_hardening_admin_key_user }}"
+    group: "{{ ssh_hardening_admin_key_user }}"
+    mode: "0700"
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname not in ssh_hardening_admin_target_excluded_hosts
+
+- name: Deploy admin and jump public SSH keys on enrolled servers
+  ansible.posix.authorized_key:
+    user: "{{ ssh_hardening_admin_key_user }}"
+    key: "{{ hostvars[item].ssh_hardening_admin_public_key_value }}"
+    state: present
+    manage_dir: false
+    comment: "Managed by Ansible - {{ item }}"
+  loop: "{{ ssh_hardening_admin_source_hosts }}"
+  when:
+    - ssh_hardening_manage_admin_ssh_keys | bool
+    - inventory_hostname not in ssh_hardening_admin_target_excluded_hosts
+    - hostvars[item].ssh_hardening_admin_public_key_value is defined
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers

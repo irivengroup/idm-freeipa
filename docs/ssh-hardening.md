@@ -4,71 +4,32 @@
 
 ## Objectif
 
-Sécuriser l’accès SSH sans écraser le fichier principal `/etc/ssh/sshd_config`.
+Le rôle `ssh_hardening` durcit SSH via `/etc/ssh/sshd_config.d/99-idm-hardening.conf` et prépare l’accès sans mot de passe depuis les hôtes d’administration.
 
-Le rôle `ssh_hardening` utilise un fichier drop-in dédié :
+## Distribution des clés SSH admin/bastion
 
-```text
-/etc/ssh/sshd_config.d/99-idm-hardening.conf
-```
+Sources :
 
-## Contrôles appliqués
+- `idm_admin`
+- `jump_hosts`
 
-```text
-PermitRootLogin no
-PasswordAuthentication yes
-PubkeyAuthentication yes
-GSSAPIAuthentication yes
-KerberosAuthentication yes
-UsePAM yes
+Cibles :
 
-MaxAuthTries 3
-LoginGraceTime 30
-ClientAliveInterval 300
-ClientAliveCountMax 2
+- tous les hôtes enrôlés sauf `idm_admin` et `jump_hosts`
 
-X11Forwarding no
-AllowTcpForwarding no
-PermitEmptyPasswords no
+Le rôle :
 
-AllowGroups linux-admins devops-admins security-auditors idm-admins breakglass-admins
-```
-
-## Pourquoi un drop-in
-
-Cette approche évite :
-
-- l’écrasement du fichier principal ;
-- les conflits avec les paquets OpenSSH ;
-- les pertes de configuration locales ;
-- les diffs difficiles à auditer.
-
-## Groupes autorisés
-
-- `linux-admins`
-- `devops-admins`
-- `security-auditors`
-- `idm-admins`
-- `breakglass-admins`
+1. génère une clé SSH `ed25519` si absente sur les hôtes sources ;
+2. collecte les clés publiques ;
+3. les déploie dans `authorized_keys` de `ansible_user` sur les cibles ;
+4. préserve RBAC, HBAC, sudo IPA et audit.
 
 ## Validation
 
 ```bash
-sshd -t
-systemctl status sshd
-cat /etc/ssh/sshd_config.d/99-idm-hardening.conf
-ssh testadmin@idmadmin.iriven.lab
-sudo -l
+ssh idmprimarya.iriven.lab
+ssh idmreplicab.iriven.lab
+ssh idmloadbalancer1.iriven.lab
 ```
-
-## Évolution cible
-
-Phase suivante :
-
-```text
-PasswordAuthentication no
-```
-
-avec clés SSH, GSSAPI ou certificats SSH.
 
 [Retour à l'index](index.md)

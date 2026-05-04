@@ -19,3 +19,9 @@ ssh_hardening_allow_groups:
   - security-auditors
   - idm-admins
   - breakglass-admins
+
+ssh_hardening_manage_admin_ssh_keys: true
+ssh_hardening_admin_key_user: "{{ ansible_user | default('iriven') }}"
+ssh_hardening_admin_key_type: ed25519
+ssh_hardening_admin_key_path: ".ssh/id_{{ ssh_hardening_admin_key_type }}"
+ssh_hardening_admin_key_comment: "iriven-idm-admin@{{ inventory_hostname }}"
