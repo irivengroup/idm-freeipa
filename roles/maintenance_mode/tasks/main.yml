@@ -1,0 +1,13 @@
+---
+- name: Validate maintenance mode action
+  ansible.builtin.assert:
+    that:
+      - maintenance_mode_action in maintenance_mode_allowed_actions
+      - maintenance_mode_target_host | length > 0
+
+- name: Maintenance mode status
+  ansible.builtin.debug:
+    msg:
+      target: "{{ maintenance_mode_target_host }}"
+      action: "{{ maintenance_mode_action }}"
+      note: "{{ maintenance_mode_message }}"

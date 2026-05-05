@@ -1,0 +1,8 @@
+---
+- name: Maintenance mode operations
+  hosts: idm_loadbalancers
+  become: true
+  gather_facts: false
+
+  roles:
+    - maintenance_mode

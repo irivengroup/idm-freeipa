@@ -1,0 +1,7 @@
+---
+maintenance_mode_target_host: ""
+maintenance_mode_action: enable
+maintenance_mode_allowed_actions:
+  - enable
+  - disable
+maintenance_mode_message: Planned IDM maintenance
