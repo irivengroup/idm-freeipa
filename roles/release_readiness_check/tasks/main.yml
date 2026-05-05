@@ -3,8 +3,6 @@
   ansible.builtin.file:
     path: "{{ release_readiness_report_dir }}"
     state: directory
-    owner: root
-    group: root
     mode: "0750"
 
 - name: Check required project paths
@@ -47,8 +45,6 @@
 - name: Write release readiness report
   ansible.builtin.copy:
     dest: "{{ release_readiness_report_dir }}/release-readiness.report"
-    owner: root
-    group: root
     mode: "0640"
     content: |
       Project root: {{ release_readiness_project_root }}

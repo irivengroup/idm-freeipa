@@ -61,3 +61,10 @@ playbooks/60-healthcheck.yml
 ```
 
 [Retour à l'index](index.md)
+
+
+## Warning DNA range sur replica
+
+Le warning `IPADNARangeCheck.no_dna_range_defined` est classifié comme accepté sur une replica tant que cette replica ne doit pas créer directement des utilisateurs ou groupes POSIX.
+
+[Retour à l'index](index.md)

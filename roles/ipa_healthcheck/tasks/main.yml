@@ -136,3 +136,43 @@
   when:
     - inventory_hostname in groups.get('idm_servers', [])
     - ipa_healthcheck_native_result is defined
+
+- name: Classify accepted IPA healthcheck warnings
+  ansible.builtin.set_fact:
+    ipa_healthcheck_accepted_warnings: >-
+      {{
+        ipa_healthcheck_native_result.stdout_lines | default([])
+        | select('search', 'IPADNARangeCheck.no_dna_range_defined')
+        | list
+      }}
+    ipa_healthcheck_unexpected_warnings: >-
+      {{
+        ipa_healthcheck_native_result.stdout_lines | default([])
+        | reject('search', 'IPADNARangeCheck.no_dna_range_defined')
+        | reject('search', '^No issues found\.$')
+        | list
+      }}
+  when:
+    - inventory_hostname in groups.get('idm_servers', [])
+    - ipa_healthcheck_native_result is defined
+
+- name: Display IPA accepted healthcheck warnings
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      accepted_warnings: "{{ ipa_healthcheck_accepted_warnings }}"
+      note: "DNA range warning on a replica is accepted unless this replica must create POSIX users/groups directly."
+  when:
+    - inventory_hostname in groups.get('idm_servers', [])
+    - ipa_healthcheck_accepted_warnings is defined
+    - ipa_healthcheck_accepted_warnings | length > 0
+
+- name: Display IPA unexpected healthcheck warnings
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      unexpected_warnings: "{{ ipa_healthcheck_unexpected_warnings }}"
+  when:
+    - inventory_hostname in groups.get('idm_servers', [])
+    - ipa_healthcheck_unexpected_warnings is defined
+    - ipa_healthcheck_unexpected_warnings | length > 0

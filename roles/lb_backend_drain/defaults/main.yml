@@ -1,0 +1,9 @@
+---
+lb_backend_drain_backend_name: freeipa_backend
+lb_backend_drain_server_name: ""
+lb_backend_drain_state: drain
+lb_backend_drain_socket: /run/haproxy/admin.sock
+lb_backend_drain_allowed_states:
+  - drain
+  - ready
+  - maint

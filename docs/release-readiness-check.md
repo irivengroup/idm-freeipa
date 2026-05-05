@@ -31,3 +31,18 @@ ansible-playbook -i inventory/hosts.ini playbooks/98-release-readiness-check.yml
 ```
 
 [Retour à l'index](index.md)
+
+
+## Rapport local
+
+Le rôle conserve le chemin historique :
+
+```text
+/var/log/idm-release-readiness/release-readiness.report
+```
+
+Le playbook local surcharge ce chemin vers :
+
+```text
+.reports/release-readiness/release-readiness.report
+```

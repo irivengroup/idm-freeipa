@@ -55,4 +55,5 @@
     state: started
   loop:
     - haproxy
+      - socat
     - keepalived

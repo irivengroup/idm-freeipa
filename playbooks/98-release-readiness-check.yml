@@ -5,5 +5,8 @@
   become: false
   gather_facts: false
 
+  vars:
+    release_readiness_report_dir: "{{ playbook_dir | dirname }}/.reports/release-readiness"
+
   roles:
     - release_readiness_check

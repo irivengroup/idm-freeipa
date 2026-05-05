@@ -90,3 +90,7 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [RBAC reporting](rbac-reporting.md)
 
 - [Replica topology check](replica-topology-check.md)
+
+- [Load balancer backend drain](lb-backend-drain.md)
+
+- [Ansible callback compatibility](ansible-callback-compatibility.md)

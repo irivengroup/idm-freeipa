@@ -1,0 +1,50 @@
+---
+- name: Validate requested HAProxy backend state
+  ansible.builtin.assert:
+    that:
+      - lb_backend_drain_state in lb_backend_drain_allowed_states
+      - lb_backend_drain_server_name | length > 0
+
+- name: Check HAProxy admin socket
+  ansible.builtin.stat:
+    path: "{{ lb_backend_drain_socket }}"
+  register: lb_backend_drain_socket_stat
+
+- name: Assert HAProxy admin socket exists
+  ansible.builtin.assert:
+    that:
+      - lb_backend_drain_socket_stat.stat.exists
+
+- name: Read HAProxy server state before change
+  ansible.builtin.shell: |
+    set -euo pipefail
+    echo "show servers state" | socat - {{ lb_backend_drain_socket }}
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: lb_backend_drain_before
+
+- name: Set HAProxy backend server state
+  ansible.builtin.shell: |
+    set -euo pipefail
+    echo "set server {{ lb_backend_drain_backend_name }}/{{ lb_backend_drain_server_name }} state {{ lb_backend_drain_state }}" | socat - {{ lb_backend_drain_socket }}
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Read HAProxy server state after change
+  ansible.builtin.shell: |
+    set -euo pipefail
+    echo "show servers state" | socat - {{ lb_backend_drain_socket }}
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: lb_backend_drain_after
+
+- name: Display HAProxy backend drain summary
+  ansible.builtin.debug:
+    msg:
+      load_balancer: "{{ inventory_hostname }}"
+      backend: "{{ lb_backend_drain_backend_name }}"
+      server: "{{ lb_backend_drain_server_name }}"
+      requested_state: "{{ lb_backend_drain_state }}"

@@ -1,0 +1,8 @@
+---
+- name: Drain or restore HAProxy backend server
+  hosts: idm_loadbalancers
+  become: true
+  gather_facts: false
+
+  roles:
+    - lb_backend_drain
