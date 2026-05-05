@@ -98,3 +98,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [HAProxy runtime directory fix](haproxy-runtime-fix.md)
 
 - [Maintenance mode](maintenance-mode.md)
+
+- [User lifecycle baseline](user-lifecycle-baseline.md)

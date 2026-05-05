@@ -1,0 +1,8 @@
+---
+- name: Configure IDM user lifecycle baseline
+  hosts: idm_primary
+  become: true
+  gather_facts: false
+
+  roles:
+    - user_lifecycle_baseline

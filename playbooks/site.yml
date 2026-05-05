@@ -29,6 +29,9 @@
 - name: Configure RBAC, HBAC and sudo policies
   import_playbook: 50-configure-rbac.yml
 
+- name: Configure IDM user lifecycle baseline
+  import_playbook: 52-user-lifecycle-baseline.yml
+
 - name: Configure FreeIPA backup automation
   import_playbook: 70-configure-backup.yml
 

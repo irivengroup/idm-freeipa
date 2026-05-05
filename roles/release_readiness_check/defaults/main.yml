@@ -23,6 +23,7 @@ release_readiness_required_playbooks:
   - playbooks/30-enroll-clients.yml
   - playbooks/40-configure-loadbalancers.yml
   - playbooks/50-configure-rbac.yml
+  - playbooks/52-user-lifecycle-baseline.yml
   - playbooks/60-healthcheck.yml
   - playbooks/70-configure-backup.yml
   - playbooks/88-validate-secrets.yml
@@ -34,6 +35,7 @@ release_readiness_required_roles:
   - ipa_replica
   - ipa_client
   - ipa_rbac
+  - user_lifecycle_baseline
   - ipa_healthcheck
   - ssh_hardening
   - audit_baseline

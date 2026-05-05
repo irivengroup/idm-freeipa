@@ -1,0 +1,58 @@
+---
+- name: Obtain Kerberos ticket with keytab
+  ansible.builtin.command: kinit -k
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Ensure automation users exist
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if ipa user-show {{ item.uid }} >/dev/null 2>&1; then
+      ipa user-mod {{ item.uid }} --first="{{ item.first }}" --last="{{ item.last }}" --shell="{{ user_lifecycle_baseline_default_shell }}" >/dev/null
+    else
+      ipa user-add {{ item.uid }} --first="{{ item.first }}" --last="{{ item.last }}" --shell="{{ user_lifecycle_baseline_default_shell }}" >/dev/null
+      printf '%s\n%s\n' "{{ user_lifecycle_baseline_automation_user_password }}" "{{ user_lifecycle_baseline_automation_user_password }}" | ipa passwd {{ item.uid }} >/dev/null
+      echo changed
+    fi
+  args:
+    executable: /bin/bash
+  loop: "{{ user_lifecycle_baseline_automation_users }}"
+  register: user_lifecycle_baseline_user_create
+  changed_when: "'changed' in user_lifecycle_baseline_user_create.stdout"
+  no_log: true
+
+- name: Ensure automation users are members of RBAC groups
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ipa group-add-member {{ item.group }} --users={{ item.uid }} >/dev/null 2>&1 || true
+  args:
+    executable: /bin/bash
+  loop: "{{ user_lifecycle_baseline_automation_users }}"
+  changed_when: false
+
+- name: Ensure scoped HBAC rules for automation users exist
+  ansible.builtin.shell: |
+    set -euo pipefail
+    rule="allow-{{ item.uid | lower }}"
+    ipa hbacrule-show "$rule" >/dev/null 2>&1 || ipa hbacrule-add "$rule" >/dev/null
+    ipa hbacrule-add-user "$rule" --users={{ item.uid }} >/dev/null 2>&1 || true
+    ipa hbacrule-add-host "$rule" --hostgroups={{ item.scope_hostgroup }} >/dev/null 2>&1 || true
+    ipa hbacrule-add-service "$rule" --hbacsvcs=sshd >/dev/null 2>&1 || true
+    ipa hbacrule-enable "$rule" >/dev/null 2>&1 || true
+  args:
+    executable: /bin/bash
+  loop: "{{ user_lifecycle_baseline_automation_users }}"
+  changed_when: false
+
+- name: Write automation users report
+  ansible.builtin.copy:
+    dest: /var/log/idm-user-lifecycle-automation-users.report
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # IDM Automation Users
+      {% for item in user_lifecycle_baseline_automation_users %}
+      - {{ item.uid }} / {{ item.group }} / {{ item.scope_hostgroup }}
+      {% endfor %}

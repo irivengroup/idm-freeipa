@@ -5,10 +5,10 @@
 
 # FreeIPA administrative account used by automation.
 idm_admin_principal: admin
-idm_admin_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+idm_admin_password: "Str0ngAdminPassw0rd!"  # CHANGE_ME_USE_ANSIBLE_VAULT
 
 # FreeIPA Directory Manager password.
-idm_dm_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+idm_dm_password: "Str0ngDirectoryPassw0rd!"  # CHANGE_ME_USE_ANSIBLE_VAULT
 
 # Client enrollment password.
 # Usually same as idm_admin_password, but kept explicit for clarity.
@@ -16,7 +16,7 @@ ipa_client_admin_password: "{{ idm_admin_password }}"
 
 # Breakglass account initial password.
 # Rotate after first use and store outside Git.
-idm_breakglass_initial_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+idm_breakglass_initial_password: "Str0ngBreakglassPassw0rd!"  # CHANGE_ME_USE_ANSIBLE_VAULT
 
 # Optional offsite backup secret material.
 ipa_backup_offsite_enabled: false

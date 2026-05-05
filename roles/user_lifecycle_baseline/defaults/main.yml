@@ -1,0 +1,40 @@
+---
+user_lifecycle_baseline_default_shell: /bin/bash
+user_lifecycle_baseline_automation_user_password: "{{ idm_breakglass_initial_password | default('Str0ngBreakglassPassw0rd!') }}"
+user_lifecycle_baseline_automation_users:
+  - uid: LINUXADMAUTOMUSER
+    first: Linux
+    last: Admin Automation User
+    group: linux-admins
+    scope_hostgroup: linux-all
+    desc: Generic automation identity for Linux administration
+  - uid: DEVOPSADMAUTOMUSER
+    first: DevOps
+    last: Admin Automation User
+    group: devops-admins
+    scope_hostgroup: app-servers
+    desc: Generic automation identity for DevOps administration
+  - uid: SECAUDITAUTOMUSER
+    first: Security
+    last: Auditor Automation User
+    group: security-auditors
+    scope_hostgroup: linux-all
+    desc: Generic automation identity for security audit operations
+  - uid: DBADMAUTOMUSER
+    first: Database
+    last: Admin Automation User
+    group: db-admins
+    scope_hostgroup: db-servers
+    desc: Generic automation identity for database administration
+  - uid: IDMADMAUTOMUSER
+    first: IDM
+    last: Admin Automation User
+    group: idm-admins
+    scope_hostgroup: idm-servers
+    desc: Generic automation identity for IDM administration
+  - uid: BREAKGLASSAUTOMUSER
+    first: Breakglass
+    last: Automation User
+    group: breakglass-admins
+    scope_hostgroup: linux-all
+    desc: Emergency automation identity for breakglass operations
