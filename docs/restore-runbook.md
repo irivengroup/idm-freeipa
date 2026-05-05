@@ -9,7 +9,7 @@ Valider que les sauvegardes FreeIPA sont réellement exploitables.
 ## Readiness
 
 ```bash
-ansible-playbook -i inventory/hosts.ini playbooks/71-test-backup-restore-readiness.yml
+ansible-playbook -i inventory/hosts.ini playbooks/71-backup-restore-readiness-check.yml
 ```
 
 ## Sauvegarde manuelle

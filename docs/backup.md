@@ -34,7 +34,7 @@ ipa_backup_offsite_target: "idmadmin.iriven.lab:/srv/backups/freeipa"
 systemctl start ipa-backup-iriven.service
 journalctl -u ipa-backup-iriven.service --no-pager -n 100
 ls -lah /var/backups/ipa /var/backups/ipa/manifests
-ansible-playbook -i inventory/hosts.ini playbooks/71-test-backup-restore-readiness.yml
+ansible-playbook -i inventory/hosts.ini playbooks/71-backup-restore-readiness-check.yml
 ```
 
 Voir aussi : [Restore runbook](restore-runbook.md)

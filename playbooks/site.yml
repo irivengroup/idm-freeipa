@@ -36,7 +36,7 @@
   import_playbook: 87-configure-log-rotation.yml
 
 - name: Validate backup restore readiness
-  import_playbook: 71-test-backup-restore-readiness.yml
+  import_playbook: 71-backup-restore-readiness-check.yml
 
 - name: Generate effective RBAC report
   import_playbook: 55-rbac-reporting.yml
