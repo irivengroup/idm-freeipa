@@ -94,3 +94,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Load balancer backend drain](lb-backend-drain.md)
 
 - [Ansible callback compatibility](ansible-callback-compatibility.md)
+
+- [HAProxy runtime directory fix](haproxy-runtime-fix.md)

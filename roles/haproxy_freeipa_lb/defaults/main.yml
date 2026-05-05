@@ -1,0 +1,6 @@
+---
+
+haproxy_runtime_dir: /run/haproxy
+haproxy_admin_socket: /run/haproxy/admin.sock
+haproxy_runtime_owner: haproxy
+haproxy_runtime_group: haproxy
