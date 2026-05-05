@@ -1,0 +1,134 @@
+---
+- name: Ensure AD Trust readiness report directory exists
+  ansible.builtin.file:
+    path: "{{ ad_trust_readiness_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Obtain Kerberos ticket with keytab
+  ansible.builtin.command: kinit -k
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_kinit
+
+- name: Check required AD Trust packages
+  ansible.builtin.command: "rpm -q {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_packages
+  loop: "{{ ad_trust_readiness_required_packages }}"
+
+- name: Check required AD Trust commands
+  ansible.builtin.command: "command -v {{ item }}"
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_commands
+  loop: "{{ ad_trust_readiness_required_commands }}"
+
+- name: Check FreeIPA trust configuration
+  ansible.builtin.command: ipa trustconfig-show
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_trustconfig
+
+- name: Check IPA configuration
+  ansible.builtin.command: ipa config-show
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_config
+
+- name: Check Chrony tracking
+  ansible.builtin.command: chronyc tracking
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_chrony
+
+- name: Check AD DNS SRV records when AD domain is provided
+  ansible.builtin.command: "dig +short SRV {{ item }}.{{ ad_trust_readiness_ad_domain }}"
+  changed_when: false
+  failed_when: false
+  register: ad_trust_readiness_dns_srv
+  loop:
+    - _ldap._tcp.dc._msdcs
+    - _kerberos._tcp
+    - _ldap._tcp
+  when: ad_trust_readiness_ad_domain | length > 0
+
+- name: Check AD DC TCP ports when DNS servers are provided
+  ansible.builtin.wait_for:
+    host: "{{ item.0 }}"
+    port: "{{ item.1 }}"
+    timeout: 3
+  failed_when: false
+  register: ad_trust_readiness_tcp_ports
+  loop: "{{ ad_trust_readiness_ad_dns_servers | product(ad_trust_readiness_required_ports_tcp) | list }}"
+  when: ad_trust_readiness_ad_dns_servers | length > 0
+
+- name: Build AD Trust readiness findings
+  ansible.builtin.set_fact:
+    ad_trust_readiness_findings: >-
+      {{
+        []
+        + (['Kerberos keytab authentication failed'] if ad_trust_readiness_kinit.rc != 0 else [])
+        + (['ipa trustconfig-show failed or AD trust not initialized'] if ad_trust_readiness_trustconfig.rc != 0 else [])
+        + (
+            ad_trust_readiness_commands.results
+            | rejectattr('rc', 'equalto', 0)
+            | map(attribute='item')
+            | map('regex_replace', '^(.*)$', 'missing command: \1')
+            | list
+          )
+        + (
+            ad_trust_readiness_packages.results
+            | rejectattr('rc', 'equalto', 0)
+            | map(attribute='item')
+            | map('regex_replace', '^(.*)$', 'missing package: \1')
+            | list
+          )
+      }}
+
+- name: Write AD Trust readiness report
+  ansible.builtin.copy:
+    dest: "{{ ad_trust_readiness_report_dir }}/{{ inventory_hostname }}-ad-trust-readiness.report"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # AD Trust readiness report
+
+      Host: {{ inventory_hostname }}
+      AD domain: {{ ad_trust_readiness_ad_domain | default('not set') }}
+
+      ## Findings
+      {{ ad_trust_readiness_findings | join('\n') if ad_trust_readiness_findings | length > 0 else 'none' }}
+
+      ## Trust config
+      ```text
+      {{ ad_trust_readiness_trustconfig.stdout | default('unavailable') }}
+      ```
+
+      ## IPA config
+      ```text
+      {{ ad_trust_readiness_config.stdout | default('unavailable') }}
+      ```
+
+      ## Chrony
+      ```text
+      {{ ad_trust_readiness_chrony.stdout | default('unavailable') }}
+      ```
+
+- name: Display AD Trust readiness summary
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      findings: "{{ ad_trust_readiness_findings }}"
+      report: "{{ ad_trust_readiness_report_dir }}/{{ inventory_hostname }}-ad-trust-readiness.report"
+
+- name: Fail when AD Trust readiness findings exist and strict mode is enabled
+  ansible.builtin.assert:
+    that:
+      - ad_trust_readiness_findings | length == 0
+    fail_msg: "AD Trust readiness failed: {{ ad_trust_readiness_findings | join(', ') }}"
+  when: ad_trust_readiness_fail_on_findings | bool

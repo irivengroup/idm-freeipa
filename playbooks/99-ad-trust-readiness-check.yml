@@ -1,0 +1,8 @@
+---
+- name: Run AD Trust readiness check
+  hosts: idm_servers
+  become: true
+  gather_facts: false
+
+  roles:
+    - ad_trust_readiness_check

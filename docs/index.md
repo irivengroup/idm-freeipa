@@ -100,3 +100,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 - [Maintenance mode](maintenance-mode.md)
 
 - [User lifecycle baseline](user-lifecycle-baseline.md)
+
+- [AD Trust readiness check](ad-trust-readiness-check.md)

@@ -46,3 +46,5 @@ release_readiness_required_roles:
   - compliance_check
   - oscap_readiness_check
 release_readiness_fail_on_error: true
+  - playbooks/99-ad-trust-readiness-check.yml
+  - ad_trust_readiness_check

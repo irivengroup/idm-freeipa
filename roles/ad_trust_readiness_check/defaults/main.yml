@@ -1,0 +1,28 @@
+---
+ad_trust_readiness_report_dir: /var/log/idm-ad-trust-readiness
+ad_trust_readiness_ad_domain: ""
+ad_trust_readiness_ad_dns_servers: []
+ad_trust_readiness_required_packages:
+  - ipa-server-trust-ad
+  - samba-client
+  - samba-common-tools
+  - oddjob
+  - oddjob-mkhomedir
+ad_trust_readiness_required_commands:
+  - ipa
+  - ipa-adtrust-install
+  - net
+  - wbinfo
+  - chronyc
+ad_trust_readiness_required_ports_tcp:
+  - 53
+  - 88
+  - 135
+  - 139
+  - 389
+  - 445
+  - 464
+  - 636
+  - 3268
+  - 3269
+ad_trust_readiness_fail_on_findings: false
