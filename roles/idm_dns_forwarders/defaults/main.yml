@@ -1,3 +1,0 @@
----
-idm_dns_forwarders: "{{ idm_dns_forwarders | default(['1.1.1.1', '8.8.8.8']) }}"
-idm_dns_forward_policy: "{{ idm_dns_forward_policy | default('first') }}"

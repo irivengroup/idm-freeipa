@@ -29,3 +29,76 @@
   no_log: true
   changed_when: false
   run_once: true
+
+- name: Obtain Kerberos ticket for DNS forwarder configuration
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if klist -s; then
+      exit 0
+    fi
+    if kinit -k >/dev/null 2>&1; then
+      exit 0
+    fi
+    printf '%s' '{{ idm_admin_password | default("") }}' | kinit {{ idm_admin_principal | default("admin") }}
+  args:
+    executable: /bin/bash
+  changed_when: false
+  no_log: true
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])
+
+- name: Read current IdM DNS global configuration
+  ansible.builtin.command: ipa dnsconfig-show
+  changed_when: false
+  register: ipa_dns_ntp_forwarders_current_config
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])
+
+- name: Configure IdM DNS global forwarders
+  ansible.builtin.command: >-
+    ipa dnsconfig-mod
+    --forward-policy={{ ipa_dns_ntp_dns_forward_policy }}
+    {% for forwarder in ipa_dns_ntp_dns_forwarders %}
+    --forwarder={{ forwarder }}
+    {% endfor %}
+  register: ipa_dns_ntp_forwarders_configure
+  changed_when: true
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])
+    - ipa_dns_ntp_dns_forwarders is defined
+    - ipa_dns_ntp_dns_forwarders | length > 0
+
+- name: Restart named-pkcs11 to apply DNS forwarding
+  ansible.builtin.systemd:
+    name: named-pkcs11
+    state: restarted
+  failed_when: false
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])
+    - ipa_dns_ntp_restart_named_after_forwarders | bool
+    - ipa_dns_ntp_forwarders_configure is changed
+
+- name: Validate external DNS resolution through IdM DNS
+  ansible.builtin.command: "getent hosts {{ ipa_dns_ntp_validate_external_name }}"
+  changed_when: false
+  failed_when: false
+  register: ipa_dns_ntp_external_resolution
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])
+
+- name: Display DNS forwarder validation result
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      forwarders: "{{ ipa_dns_ntp_dns_forwarders }}"
+      forward_policy: "{{ ipa_dns_ntp_dns_forward_policy }}"
+      external_name: "{{ ipa_dns_ntp_validate_external_name }}"
+      external_resolution_rc: "{{ ipa_dns_ntp_external_resolution.rc }}"
+  when:
+    - ipa_dns_ntp_manage_dns_forwarders | bool
+    - inventory_hostname in groups.get('idm_primary', [])

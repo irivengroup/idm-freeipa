@@ -108,4 +108,4 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 
 - [Idempotence and Kerberos authentication standard](idempotence-and-kerberos-auth-standard.md)
 
-- [IdM DNS forwarders](idm-dns-forwarders.md)
+- [IPA DNS/NTP forwarders](ipa-dns-ntp-forwarders.md)
