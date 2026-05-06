@@ -5,7 +5,7 @@ Infrastructure-as-Code platform for deploying, operating, validating, and securi
 
 ---
 
-# Executive Summary
+## Executive Summary
 
 **IRIVEN IDM Platform** is an enterprise-grade Identity Management infrastructure designed to deliver a robust, maintainable, and automation-first foundation for Linux identity services.
 
@@ -42,37 +42,37 @@ The objective is to provide a resilient operational baseline suitable for:
 
 ---
 
-# Core Design Principles
+## Core Design Principles
 
 The project is built around strict infrastructure engineering principles:
 
-## Idempotence
+### Idempotence
 
 Every role and playbook is designed to be safely re-executable.
 
-## Operational Resilience
+### Operational Resilience
 
 Failure domains are minimized through replication, VIP failover, health checks, and readiness validation.
 
-## Security by Default
+### Security by Default
 
 SSH hardening, audit baselines, RBAC, HBAC, sudo control, and operational breakglass patterns are included by design.
 
-## Inventory as Source of Truth
+### Inventory as Source of Truth
 
 Infrastructure behavior is driven by inventory and centralized variables—not ad hoc host configuration.
 
-## Role-Based Responsibility Separation
+### Role-Based Responsibility Separation
 
 Each Ansible role has a single responsibility with clean operational boundaries.
 
-## Production-Grade Maintainability
+### Production-Grade Maintainability
 
 The project is structured to support long-term evolution, operational ownership, and future service expansion.
 
 ---
 
-# Target Architecture
+## Target Architecture
 
 ```text
 Administration Host
@@ -116,9 +116,9 @@ idmloadbalancer.iriven.lab
 
 ---
 
-# Platform Scope
+## Platform Scope
 
-## Identity Services
+### Identity Services
 
 - FreeIPA Primary + Replica
 - Integrated DNS
@@ -127,14 +127,14 @@ idmloadbalancer.iriven.lab
 - PKI
 - replication management
 
-## Client Integration
+### Client Integration
 
 - Linux enrollment
 - SSSD
 - SSH integration
 - centralized authentication
 
-## Access Governance
+### Access Governance
 
 - RBAC matrix
 - HBAC rules
@@ -142,7 +142,7 @@ idmloadbalancer.iriven.lab
 - breakglass administration model
 - automation identities per operational team
 
-## High Availability
+### High Availability
 
 - HAProxy
 - Keepalived
@@ -150,7 +150,7 @@ idmloadbalancer.iriven.lab
 - backend drain operations
 - maintenance mode workflows
 
-## Security Baselines
+### Security Baselines
 
 - SSH hardening
 - audit baseline
@@ -158,7 +158,7 @@ idmloadbalancer.iriven.lab
 - monitoring baseline
 - release readiness validation
 
-## Platform Validation
+### Platform Validation
 
 - health checks
 - backup / restore readiness
@@ -167,7 +167,7 @@ idmloadbalancer.iriven.lab
 
 ---
 
-# Infrastructure Naming Standard
+## Infrastructure Naming Standard
 
 | Role | Hostname | FQDN |
 |---|---|---|
@@ -184,7 +184,7 @@ idmloadbalancer.iriven.lab
 
 ---
 
-# IP Addressing Plan
+## IP Addressing Plan
 
 | Host | IP | Purpose |
 |---|---:|---|
@@ -201,27 +201,27 @@ idmloadbalancer.iriven.lab
 
 ---
 
-# Network Standards
+## Network Standards
 
-## Domain
+### Domain
 
 ```text
 iriven.lab
 ```
 
-## Realm
+### Realm
 
 ```text
 IRIVEN.LAB
 ```
 
-## Subnet
+### Subnet
 
 ```text
 192.168.1.0/24
 ```
 
-## VIP
+### VIP
 
 ```text
 192.168.1.55
@@ -229,7 +229,7 @@ IRIVEN.LAB
 
 ---
 
-# Project Structure
+## Project Structure
 
 ```text
 idm-lab/
@@ -250,9 +250,9 @@ idm-lab/
 
 ---
 
-# Deployment
+## Deployment
 
-## Full Platform Deployment
+### Full Platform Deployment
 
 ```bash
 ansible-playbook -i inventory/hosts.ini playbooks/site.yml
@@ -260,7 +260,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/site.yml
 
 ---
 
-## Domain-Specific Deployment
+### Domain-Specific Deployment
 
 ```bash
 ansible-playbook -i inventory/hosts.ini playbooks/10-install-primary.yml
@@ -273,7 +273,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/60-healthcheck.yml
 
 ---
 
-## Production Initialization
+### Production Initialization
 
 ```bash
 cd /opt/idm-lab
@@ -293,9 +293,9 @@ ansible-playbook \
 
 ---
 
-# Operational Validation
+## Operational Validation
 
-## Core Platform Validation
+### Core Platform Validation
 
 ```bash
 ansible -i inventory/hosts.ini idm_servers -b \
@@ -310,7 +310,7 @@ ansible -i inventory/hosts.ini idm_all -b \
 
 ---
 
-## Identity Validation
+### Identity Validation
 
 ```bash
 ipa host-find
@@ -320,7 +320,7 @@ systemctl status sssd
 
 ---
 
-## Client Validation
+### Client Validation
 
 ```bash
 klist -k
@@ -331,7 +331,7 @@ getent passwd admin
 
 ---
 
-## RBAC Validation
+### RBAC Validation
 
 ```bash
 ipa group-find --sizelimit=0
@@ -342,7 +342,7 @@ ipa hbacrule-find --sizelimit=0
 
 ---
 
-# Enterprise Robustness Features
+## Enterprise Robustness Features
 
 This platform includes:
 
@@ -366,7 +366,7 @@ This platform includes:
 
 ---
 
-# Known Production Extensions
+## Known Production Extensions
 
 For full enterprise production deployment, the following should be added:
 
@@ -385,7 +385,7 @@ For full enterprise production deployment, the following should be added:
 
 ---
 
-# Documentation
+## Documentation
 
 Full operational documentation:
 
@@ -393,13 +393,13 @@ Full operational documentation:
 
 ---
 
-# Authors
+## Authors
 
 **Alfred TCHONDJO**  
 Project Initiator — [IRIVEN Group](https://www.facebook.com/Tchalf)
 
 ---
 
-# Copyright
+## Copyright
 
 © IRIVEN Group — All Rights Reserved
