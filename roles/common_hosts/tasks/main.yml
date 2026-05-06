@@ -23,20 +23,6 @@
     - { ip: '{{ idm_lb_vip }}', fqdn: '{{ idm_lb_vip_fqdn }}', hostname: '{{ idm_lb_vip_fqdn.split(".")|first|lower }}' }
 
 
-- name: Check Rocky Linux repository DNS resolution
-  ansible.builtin.command: getent hosts mirrors.rockylinux.org
-  changed_when: false
-  failed_when: false
-  register: common_hosts_repo_dns_check
-
-- name: Warn when Rocky Linux repository DNS resolution is unavailable
-  ansible.builtin.debug:
-    msg:
-      - "Repository DNS resolution failed for mirrors.rockylinux.org."
-      - "Base package installation will be skipped on this host."
-      - "Fix DNS or repository access, then rerun the playbook."
-  when: common_hosts_repo_dns_check.rc != 0
-
 - name: Install base packages
   ansible.builtin.dnf:
     name:
@@ -51,7 +37,6 @@
       - python3
       - sudo
     state: present
-  when: common_hosts_repo_dns_check.rc == 0
 
 - name: Enable firewalld
   ansible.builtin.service:
