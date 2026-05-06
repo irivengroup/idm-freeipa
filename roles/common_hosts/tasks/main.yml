@@ -10,7 +10,7 @@
     block: |
       {{ idm_primary_ip }} {{ idm_primary_fqdn }} {{ idm_primary_hostname }}
       {{ idm_replica_ip }} {{ idm_replica_fqdn }} {{ idm_replica_hostname }}
-      {{ idm_lb_vip }} {{ idm_lb_vip_fqdn }} idmloadbalancer
+      {{ idm_lb_vip }} {{ idm_lb_vip_fqdn }} {{ idm_lb_vip_fqdn.split('.')|first|lower }}
     owner: root
     group: root
     mode: "0644"

@@ -7,11 +7,19 @@
     group: root
     mode: "0750"
 
-- name: Obtain Kerberos ticket with keytab
-  ansible.builtin.command: kinit -k
+- name: Check existing Kerberos credential cache
+  ansible.builtin.command: klist -s
+  register: ipa_auth_klist_cache
   changed_when: false
   failed_when: false
-  register: replica_topology_check_kinit
+
+- name: Obtain Kerberos ticket using local keytab
+  ansible.builtin.command: kinit -k
+  register: ipa_auth_kinit_keytab
+  changed_when: false
+  failed_when: false
+  when: ipa_auth_klist_cache.rc != 0
+
 
 - name: Check IPA service status
   ansible.builtin.command: ipactl status

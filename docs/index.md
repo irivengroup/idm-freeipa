@@ -105,3 +105,5 @@ This documentation describes the IRIVEN IDM lab architecture, addressing plan, d
 
 
 - [RBAC authentication troubleshooting](rbac-authentication-troubleshooting.md)
+
+- [Idempotence and Kerberos authentication standard](idempotence-and-kerberos-auth-standard.md)

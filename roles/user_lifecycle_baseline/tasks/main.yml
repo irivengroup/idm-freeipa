@@ -1,9 +1,17 @@
 ---
-- name: Obtain Kerberos ticket with keytab
-  ansible.builtin.command: kinit -k
+- name: Check existing Kerberos credential cache
+  ansible.builtin.command: klist -s
+  register: ipa_auth_klist_cache
   changed_when: false
   failed_when: false
-  no_log: true
+
+- name: Obtain Kerberos ticket using local keytab
+  ansible.builtin.command: kinit -k
+  register: ipa_auth_kinit_keytab
+  changed_when: false
+  failed_when: false
+  when: ipa_auth_klist_cache.rc != 0
+
 
 - name: Ensure automation users exist
   ansible.builtin.shell: |
