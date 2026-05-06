@@ -1,6 +1,6 @@
 # Role `log_rotation`
 
-Configures logrotate policies for IRIVEN IDM Lab operational logs.
+Configures logrotate policies for IRIVEN IDM PLATFORM operational logs.
 
 ## Scope
 

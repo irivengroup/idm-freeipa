@@ -1,8 +1,8 @@
-# IDM Lab Documentation Index
+# IDM PLATFORM Documentation Index
 
 Breadcrumbs: **Index**
 
-This documentation describes the IRIVEN IDM lab architecture, addressing plan, deployment model, Ansible roles, operating procedures, validation checks, and resilience practices.
+This documentation describes the IRIVEN IDM PLATFORM architecture, addressing plan, deployment model, Ansible roles, operating procedures, validation checks, and resilience practices.
 
 <details open>
 <summary><strong>1. Architecture and design</strong></summary>

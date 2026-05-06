@@ -4,7 +4,7 @@ Breadcrumbs: [Index](index.md) / **Architecture**
 
 # Architecture Overview
 
-The IRIVEN IDM lab provides a resilient identity management platform based on FreeIPA. It includes a primary IPA server, one replica, two load balancers, multiple clients, and an administrative host.
+The IRIVEN IDM PLATFORM provides a resilient identity management platform based on FreeIPA. It includes a primary IPA server, one replica, two load balancers, multiple clients, and an administrative host.
 
 ## Logical components
 
