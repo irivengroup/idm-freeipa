@@ -13,7 +13,7 @@
     that:
       - ipa_client_ip | length > 0
     fail_msg: "Unable to determine client IP for {{ inventory_hostname }}. Define ansible_host in inventory/hosts.ini."
-   
+
 - name: Configure hosts file for IPA servers
   ansible.builtin.lineinfile:
     path: /etc/hosts
@@ -32,7 +32,6 @@
   with_items:
     - { ip: '{{ idm_primary_ip }}', fqdn: '{{ idm_primary_fqdn }}', hostname: '{{ idm_primary_hostname }}' }
     - { ip: '{{ idm_replica_ip }}', fqdn: '{{ idm_replica_fqdn }}', hostname: '{{ idm_replica_hostname }}' }
-
 - name: Detect default IPv4 route
   ansible.builtin.command: ip route show default
   register: ipa_client_default_route

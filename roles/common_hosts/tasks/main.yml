@@ -3,17 +3,24 @@
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}.{{ idm_domain }}"
 
-- name: Maintain IDM hosts entries
-  ansible.builtin.blockinfile:
+- name: Configure hosts file for IPA servers
+  ansible.builtin.lineinfile:
     path: /etc/hosts
-    marker: "# {mark} ANSIBLE MANAGED IDM LAB HOSTS"
-    block: |
-      {{ idm_primary_ip }} {{ idm_primary_fqdn }} {{ idm_primary_hostname }}
-      {{ idm_replica_ip }} {{ idm_replica_fqdn }} {{ idm_replica_hostname }}
-      {{ idm_lb_vip }} {{ idm_lb_vip_fqdn }} {{ idm_lb_vip_fqdn.split('.')|first|lower }}
+    regexp: '^(?!#).*\s{{ item.fqdn | regex_escape() }}(\s|$)'
+    line: "{{ item.ip }} {{ item.fqdn }} {{ item.hostname }}"
     owner: root
     group: root
     mode: "0644"
+    create: true
+    state: present
+  when:
+    - item.ip is defined
+    - item.fqdn is defined
+    - item.hostname is defined
+  with_items:
+    - { ip: '{{ idm_primary_ip }}', fqdn: '{{ idm_primary_fqdn }}', hostname: '{{ idm_primary_hostname }}' }
+    - { ip: '{{ idm_replica_ip }}', fqdn: '{{ idm_replica_fqdn }}', hostname: '{{ idm_replica_hostname }}' }
+    - { ip: '{{ idm_lb_vip }}', fqdn: '{{ idm_lb_vip_fqdn }}', hostname: '{{ idm_lb_vip_fqdn.split(".")|first|lower }}' }
 
 - name: Install base packages
   ansible.builtin.dnf:
