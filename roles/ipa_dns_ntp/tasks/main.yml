@@ -1,4 +1,49 @@
 ---
+- name: Check existing Kerberos credential cache for IPA DNS/NTP
+  ansible.builtin.command: klist -s
+  register: ipa_dns_ntp_klist_cache
+  changed_when: false
+  failed_when: false
+
+- name: Check local keytab availability for IPA DNS/NTP
+  ansible.builtin.stat:
+    path: "{{ ipa_dns_ntp_keytab_path }}"
+  register: ipa_dns_ntp_keytab_stat
+  when:
+    - ipa_dns_ntp_klist_cache.rc != 0
+    - ipa_dns_ntp_auth_method in ['auto', 'keytab']
+
+- name: Obtain Kerberos ticket using local keytab for IPA DNS/NTP
+  ansible.builtin.command: kinit -k
+  register: ipa_dns_ntp_kinit_keytab
+  changed_when: false
+  failed_when: false
+  when:
+    - ipa_dns_ntp_klist_cache.rc != 0
+    - ipa_dns_ntp_auth_method in ['auto', 'keytab']
+    - ipa_dns_ntp_keytab_stat.stat.exists | default(false)
+
+- name: Obtain Kerberos ticket using IPA admin password for IPA DNS/NTP
+  ansible.builtin.shell: |
+    set -euo pipefail
+    printf '%s' '{{ ipa_dns_ntp_admin_password }}' | kinit {{ ipa_dns_ntp_admin_principal }}
+  args:
+    executable: /bin/bash
+  register: ipa_dns_ntp_kinit_password
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when:
+    - ipa_dns_ntp_klist_cache.rc != 0
+    - ipa_dns_ntp_auth_method in ['auto', 'password']
+    - ipa_dns_ntp_kinit_keytab.rc | default(1) != 0
+
+- name: Validate Kerberos authentication for IPA DNS/NTP
+  ansible.builtin.command: klist -s
+  changed_when: false
+  register: ipa_dns_ntp_klist_final
+  failed_when: ipa_dns_ntp_klist_final.rc != 0
+
 - name: Ensure Kerberos, LDAP, and NTP SRV records exist
   ansible.builtin.shell: |
     set -euo pipefail
@@ -26,27 +71,9 @@
       --srv-rec="0 100 123 {{ idm_replica_fqdn }}."
   args:
     executable: /bin/bash
-  no_log: true
+  register: ipa_dns_ntp_srv_records_result
   changed_when: false
   run_once: true
-
-- name: Obtain Kerberos ticket for DNS forwarder configuration
-  ansible.builtin.shell: |
-    set -euo pipefail
-    if klist -s; then
-      exit 0
-    fi
-    if kinit -k >/dev/null 2>&1; then
-      exit 0
-    fi
-    printf '%s' '{{ idm_admin_password | default("") }}' | kinit {{ idm_admin_principal | default("admin") }}
-  args:
-    executable: /bin/bash
-  changed_when: false
-  no_log: true
-  when:
-    - ipa_dns_ntp_manage_dns_forwarders | bool
-    - inventory_hostname in groups.get('idm_primary', [])
 
 - name: Read current IdM DNS global configuration
   ansible.builtin.command: ipa dnsconfig-show

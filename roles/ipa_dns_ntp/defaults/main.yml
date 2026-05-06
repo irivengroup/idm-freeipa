@@ -4,3 +4,7 @@ ipa_dns_ntp_dns_forwarders: "{{ idm_dns_forwarders | default(['1.1.1.1', '8.8.8.
 ipa_dns_ntp_dns_forward_policy: "{{ idm_dns_forward_policy | default('first') }}"
 ipa_dns_ntp_restart_named_after_forwarders: true
 ipa_dns_ntp_validate_external_name: mirrors.rockylinux.org
+ipa_dns_ntp_auth_method: auto
+ipa_dns_ntp_admin_principal: "{{ idm_admin_principal | default('admin') }}"
+ipa_dns_ntp_admin_password: "{{ idm_admin_password | default('') }}"
+ipa_dns_ntp_keytab_path: /etc/krb5.keytab
