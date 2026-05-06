@@ -17,7 +17,7 @@
 - name: Configure hosts file for IPA servers
   ansible.builtin.blockinfile:
     path: /etc/hosts
-    marker: "# {mark} IDM PLATFORM HOSTS"
+    marker: "# {mark} IDM LAB HOSTS"
     block: |
       {{ ipa_client_primary_ip }} {{ ipa_client_primary_fqdn }} {{ ipa_client_primary_host }}
       {{ ipa_client_replica_ip }} {{ ipa_client_replica_fqdn }} {{ ipa_client_replica_host }}

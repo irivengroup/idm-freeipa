@@ -23,3 +23,8 @@ idm_rbac_db_commands:
   - /usr/bin/journalctl
   - /usr/bin/tail
   - /usr/bin/less
+
+ipa_rbac_auth_method: auto
+ipa_rbac_admin_principal: "{{ idm_admin_principal | default('admin') }}"
+ipa_rbac_admin_password: "{{ idm_admin_password | default('') }}"
+ipa_rbac_keytab_path: /etc/krb5.keytab

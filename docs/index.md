@@ -1,8 +1,8 @@
-# IDM PLATFORM Documentation Index
+# IDM Lab Documentation Index
 
 Breadcrumbs: **Index**
 
-This documentation describes the IRIVEN IDM PLATFORM architecture, addressing plan, deployment model, Ansible roles, operating procedures, validation checks, and resilience practices.
+This documentation describes the IRIVEN IDM lab architecture, addressing plan, deployment model, Ansible roles, operating procedures, validation checks, and resilience practices.
 
 <details open>
 <summary><strong>1. Architecture and design</strong></summary>
@@ -102,3 +102,6 @@ This documentation describes the IRIVEN IDM PLATFORM architecture, addressing pl
 - [User lifecycle baseline](user-lifecycle-baseline.md)
 
 - [AD Trust readiness check](ad-trust-readiness-check.md)
+
+
+- [RBAC authentication troubleshooting](rbac-authentication-troubleshooting.md)

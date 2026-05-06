@@ -1,6 +1,6 @@
 # Role `audit_baseline`
 
-Configures a lightweight audit baseline for the IRIVEN IDM PLATFORM.
+Configures a lightweight audit baseline for the IRIVEN IDM lab.
 
 ## Responsibilities
 

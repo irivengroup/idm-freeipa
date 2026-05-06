@@ -6,7 +6,7 @@
 - name: Maintain IDM hosts entries
   ansible.builtin.blockinfile:
     path: /etc/hosts
-    marker: "# {mark} ANSIBLE MANAGED IDM PLATFORM HOSTS"
+    marker: "# {mark} ANSIBLE MANAGED IDM LAB HOSTS"
     block: |
       {{ idm_primary_ip }} {{ idm_primary_fqdn }} {{ idm_primary_hostname }}
       {{ idm_replica_ip }} {{ idm_replica_fqdn }} {{ idm_replica_hostname }}
@@ -24,6 +24,8 @@
       - bind-utils
       - chrony
       - firewalld
+      - nmap-ncat
+      - rsync
       - python3
       - sudo
     state: present
