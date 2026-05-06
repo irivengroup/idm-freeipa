@@ -26,8 +26,7 @@
 - name: Obtain Kerberos ticket using IPA admin password
   ansible.builtin.shell: |
     set -euo pipefail
-    printf '%s
-' '{{ ipa_rbac_admin_password }}' | kinit {{ ipa_rbac_admin_principal }}
+    printf '%s' '{{ ipa_rbac_admin_password }}' | kinit {{ ipa_rbac_admin_principal }}
   args:
     executable: /bin/bash
   register: ipa_rbac_kinit_password
