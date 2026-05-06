@@ -1,0 +1,46 @@
+---
+- name: Obtain Kerberos ticket for DNS forwarder configuration
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if klist -s; then
+      exit 0
+    fi
+    if kinit -k >/dev/null 2>&1; then
+      exit 0
+    fi
+    printf '%s' '{{ idm_admin_password | default("") }}' | kinit {{ idm_admin_principal | default("admin") }}
+  args:
+    executable: /bin/bash
+  changed_when: false
+  no_log: true
+
+- name: Configure IdM DNS global forwarders
+  ansible.builtin.command: >-
+    ipa dnsconfig-mod
+    --forward-policy={{ idm_dns_forward_policy }}
+    {% for forwarder in idm_dns_forwarders %}
+    --forwarder={{ forwarder }}
+    {% endfor %}
+  changed_when: true
+  when:
+    - idm_dns_forwarders is defined
+    - idm_dns_forwarders | length > 0
+
+- name: Restart named-pkcs11 to apply DNS forwarding
+  ansible.builtin.systemd:
+    name: named-pkcs11
+    state: restarted
+  failed_when: false
+
+- name: Validate external DNS resolution through IdM DNS
+  ansible.builtin.command: getent hosts mirrors.rockylinux.org
+  changed_when: false
+  failed_when: false
+  register: idm_dns_forwarders_external_resolution
+
+- name: Display DNS forwarder validation result
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      forwarders: "{{ idm_dns_forwarders }}"
+      external_resolution_rc: "{{ idm_dns_forwarders_external_resolution.rc }}"

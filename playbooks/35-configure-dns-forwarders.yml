@@ -1,0 +1,8 @@
+---
+- name: Configure IdM DNS forwarders
+  hosts: idm_servers
+  become: true
+  gather_facts: false
+
+  roles:
+    - idm_dns_forwarders

@@ -21,6 +21,7 @@ release_readiness_required_playbooks:
   - playbooks/10-install-primary.yml
   - playbooks/20-install-replica.yml
   - playbooks/30-enroll-clients.yml
+  - playbooks/35-configure-dns-forwarders.yml
   - playbooks/40-configure-loadbalancers.yml
   - playbooks/50-configure-rbac.yml
   - playbooks/52-user-lifecycle-baseline.yml
@@ -34,6 +35,7 @@ release_readiness_required_roles:
   - ipa_primary
   - ipa_replica
   - ipa_client
+  - idm_dns_forwarders
   - ipa_rbac
   - user_lifecycle_baseline
   - ipa_healthcheck

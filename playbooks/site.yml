@@ -73,3 +73,6 @@
 
 - name: Run AD Trust readiness check
   import_playbook: 99-ad-trust-readiness-check.yml
+
+- name: Configure IdM DNS forwarders
+  import_playbook: 35-configure-dns-forwarders.yml
